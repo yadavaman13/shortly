@@ -1,9 +1,17 @@
 import { useState } from 'react';
-import { Copy, Check, ExternalLink, Trash2, QrCode, MousePointerClick, CornerDownRight, Loader2 } from 'lucide-react';
+import {
+    Copy,
+    Check,
+    ExternalLink,
+    Trash2,
+    MousePointerClick,
+    CornerDownRight,
+    Loader2,
+} from 'lucide-react';
 import { useClipboard } from '../../hooks/index.js';
 import './UrlCard.scss';
 
-export const UrlCard = ({ item, onDelete, onShowQr, isDeleting }) => {
+export const UrlCard = ({ item, onDelete, isDeleting }) => {
     const { copyToClipboard, isCopied } = useClipboard();
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -83,18 +91,6 @@ export const UrlCard = ({ item, onDelete, onShowQr, isDeleting }) => {
                     <ExternalLink size={14} />
                 </a>
 
-                {onShowQr && (
-                    <button
-                        type="button"
-                        className="btn-icon"
-                        onClick={() => onShowQr(fullShortUrl, item.shortUrl)}
-                        title="View QR Code"
-                        aria-label="View QR Code"
-                    >
-                        <QrCode size={14} />
-                    </button>
-                )}
-
                 <button
                     type="button"
                     className={`btn-icon delete-btn ${confirmDelete ? 'confirm-danger' : ''}`}
@@ -103,11 +99,7 @@ export const UrlCard = ({ item, onDelete, onShowQr, isDeleting }) => {
                     title={confirmDelete ? 'Click again to confirm deletion' : 'Delete URL'}
                     aria-label="Delete URL"
                 >
-                    {isDeleting ? (
-                        <Loader2 size={14} className="spinner" />
-                    ) : (
-                        <Trash2 size={14} />
-                    )}
+                    {isDeleting ? <Loader2 size={14} className="spinner" /> : <Trash2 size={14} />}
                 </button>
             </div>
         </div>

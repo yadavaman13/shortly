@@ -10,7 +10,7 @@ const urlApiInstance = axios.create({
 
 /**
  * Creates a shortened URL
- * @param {string|{url: string, alias?: string, expiresIn?: number}} payload
+ * @param {string|{url: string}} payload
  * @returns {Promise<object>} Created URL record data
  */
 export async function createShortenUrl(payload) {

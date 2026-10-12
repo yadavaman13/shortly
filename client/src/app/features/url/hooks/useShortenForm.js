@@ -3,8 +3,6 @@ import { useUrlContext } from '../context/urlContext.jsx';
 
 const INITIAL_FORM = {
     url: '',
-    alias: '',
-    expiresIn: '',
 };
 
 /**
@@ -14,7 +12,6 @@ export function useShortenForm() {
     const { shortenUrl, submitting, error, clearError } = useUrlContext();
     const [formData, setFormData] = useState(INITIAL_FORM);
     const [formErrors, setFormErrors] = useState({});
-    const [showAdvanced, setShowAdvanced] = useState(false);
 
     const validate = useCallback(() => {
         const errors = {};
@@ -26,22 +23,6 @@ export function useShortenForm() {
             errors.url = 'URL must start with http:// or https://';
         } else if (trimmedUrl.length > 2048) {
             errors.url = 'URL is too long (max 2048 chars)';
-        }
-
-        if (formData.alias.trim()) {
-            const alias = formData.alias.trim();
-            if (alias.length < 4 || alias.length > 20) {
-                errors.alias = 'Alias must be 4 to 20 characters';
-            } else if (!/^[a-zA-Z0-9-]+$/.test(alias)) {
-                errors.alias = 'Only letters, numbers, and hyphens are allowed';
-            }
-        }
-
-        if (formData.expiresIn) {
-            const exp = Number(formData.expiresIn);
-            if (isNaN(exp) || exp < 1 || exp > 8760) {
-                errors.expiresIn = 'Expiration must be between 1 and 8760 hours';
-            }
         }
 
         setFormErrors(errors);
@@ -75,7 +56,6 @@ export function useShortenForm() {
     const resetForm = useCallback(() => {
         setFormData(INITIAL_FORM);
         setFormErrors({});
-        setShowAdvanced(false);
     }, []);
 
     const handleSubmit = useCallback(
@@ -87,14 +67,6 @@ export function useShortenForm() {
                 url: formData.url.trim(),
             };
 
-            if (formData.alias.trim()) {
-                payload.alias = formData.alias.trim();
-            }
-
-            if (formData.expiresIn) {
-                payload.expiresIn = Number(formData.expiresIn);
-            }
-
             const res = await shortenUrl(payload);
             resetForm();
             return res;
@@ -105,8 +77,6 @@ export function useShortenForm() {
     return {
         formData,
         formErrors,
-        showAdvanced,
-        setShowAdvanced,
         submitting,
         error,
         handleChange,

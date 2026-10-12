@@ -3,7 +3,7 @@ import { useUrls } from '../../hooks/index.js';
 import { UrlCard } from '../UrlCard/UrlCard.jsx';
 import './UrlList.scss';
 
-export const UrlList = ({ onShowQr }) => {
+export const UrlList = () => {
     const {
         urls,
         allUrls,
@@ -83,7 +83,7 @@ export const UrlList = ({ onShowQr }) => {
                 ) : urls.length === 0 ? (
                     <div className="url-empty-state">
                         <div className="empty-icon-wrap">
-                            <LinkOff size={24} />
+                            <SearchX size={24} />
                         </div>
                         <h4 className="empty-title">No matching links</h4>
                         <p className="empty-desc">
@@ -96,7 +96,6 @@ export const UrlList = ({ onShowQr }) => {
                             key={item._id || item.id || item.shortUrl}
                             item={item}
                             onDelete={removeUrl}
-                            onShowQr={onShowQr}
                             isDeleting={deletingId === (item._id || item.id || item.shortUrl)}
                         />
                     ))

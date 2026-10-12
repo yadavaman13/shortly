@@ -101,8 +101,13 @@ export const UrlProvider = ({ children }) => {
                 setDeletingId(id);
                 setError(null);
                 await apiDeleteUrl(id);
-                setUrls((prev) => prev.filter((item) => (item._id || item.id) !== id && item.shortUrl !== id));
-                if (currentUrl && (currentUrl._id === id || currentUrl.id === id || currentUrl.shortUrl === id)) {
+                setUrls((prev) =>
+                    prev.filter((item) => (item._id || item.id) !== id && item.shortUrl !== id),
+                );
+                if (
+                    currentUrl &&
+                    (currentUrl._id === id || currentUrl.id === id || currentUrl.shortUrl === id)
+                ) {
                     setCurrentUrl(null);
                 }
                 showToast('URL deleted successfully', 'success');

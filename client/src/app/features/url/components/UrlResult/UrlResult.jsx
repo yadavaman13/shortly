@@ -1,9 +1,9 @@
-import { Check, Copy, ExternalLink, QrCode, X, Sparkles } from 'lucide-react';
+import { Check, Copy, ExternalLink, X, Sparkles } from 'lucide-react';
 import { useUrlContext } from '../../context/urlContext.jsx';
 import { useClipboard } from '../../hooks/index.js';
 import './UrlResult.scss';
 
-export const UrlResult = ({ onShowQr }) => {
+export const UrlResult = () => {
     const { currentUrl, clearCurrentUrl } = useUrlContext();
     const { copyToClipboard, isCopied } = useClipboard();
 
@@ -62,17 +62,6 @@ export const UrlResult = ({ onShowQr }) => {
                         <ExternalLink size={14} />
                         <span>Visit</span>
                     </a>
-
-                    {onShowQr && (
-                        <button
-                            type="button"
-                            className="action-btn secondary"
-                            onClick={() => onShowQr(fullUrl, currentUrl.shortUrl)}
-                            title="Generate QR Code"
-                        >
-                            <QrCode size={14} />
-                        </button>
-                    )}
                 </div>
             </div>
 

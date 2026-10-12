@@ -24,7 +24,9 @@
     border-radius: $border-radius-md;
     font-size: 0.85rem;
     font-weight: 500;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    box-shadow:
+        0 10px 15px -3px rgba(0, 0, 0, 0.2),
+        0 4px 6px -4px rgba(0, 0, 0, 0.1);
     animation: toastPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 
     &.info,

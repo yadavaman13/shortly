@@ -7,7 +7,6 @@ export const Footer = () => {
                 <div className="footer-brand">
                     <span className="brand-name">Url Shortner</span>
                 </div>
-
             </div>
         </footer>
     );

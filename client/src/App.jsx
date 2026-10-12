@@ -1,27 +1,9 @@
-import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
 import { UrlProvider } from './app/features/url/context/urlContext.jsx';
-import {
-    UrlForm,
-    UrlResult,
-    UrlStats,
-    UrlList,
-    QrModal,
-} from './app/features/url/components/index.js';
+import { UrlForm, UrlResult, UrlStats, UrlList } from './app/features/url/components/index.js';
 import { Navbar, Toast, Footer } from './app/components/index.js';
 import './App.scss';
 
 function AppContent() {
-    const [qrData, setQrData] = useState(null);
-
-    const handleShowQr = (url, shortCode) => {
-        setQrData({ url, shortCode });
-    };
-
-    const handleCloseQr = () => {
-        setQrData(null);
-    };
-
     return (
         <div className="app-container">
             <div className="app-bg-grid" aria-hidden="true" />
@@ -33,8 +15,8 @@ function AppContent() {
                         A cleaner web with <span className="highlight">shorter links</span>.
                     </h1>
                     <p className="hero-description">
-                        Instant 6-character links with collision-safe generation, real-time atomic visit
-                        analytics, and custom aliases.
+                        Instant 6-character links with collision-safe generation and real-time
+                        atomic visit analytics.
                     </p>
                 </section>
 
@@ -42,22 +24,14 @@ function AppContent() {
 
                 <UrlForm />
 
-                <UrlResult onShowQr={handleShowQr} />
+                <UrlResult />
 
-                <UrlList onShowQr={handleShowQr} />
+                <UrlList />
             </main>
 
             <Footer />
 
             <Toast />
-
-            {qrData && (
-                <QrModal
-                    url={qrData.url}
-                    shortCode={qrData.shortCode}
-                    onClose={handleCloseQr}
-                />
-            )}
         </div>
     );
 }
