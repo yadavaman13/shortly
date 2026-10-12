@@ -15,7 +15,7 @@ export async function createShortenUrl(req, res) {
 
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             return res.status(400).json({
-                error: 'Please enter a valid URL (must start with http:// or https://)',
+                error: 'Please enter a valid URL',
             });
         }
 
@@ -169,17 +169,20 @@ export async function deleteUrl(req, res) {
         }
 
         let url = null;
+
+        //check by id
         if (mongoose.Types.ObjectId.isValid(id)) {
             url = await urlModel.findByIdAndDelete(id);
         }
 
+        //check for shorturl
         if (!url) {
             url = await urlModel.findOneAndDelete({ shortUrl: id });
         }
 
         if (!url) {
             return res.status(404).json({
-                error: 'No url exists with this id',
+                error: 'No url exists with this id and shorturl',
             });
         }
 
