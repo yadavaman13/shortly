@@ -4,7 +4,7 @@
     "main": "index.js",
     "type": "module",
     "scripts": {
-        "build": "node --check server.js",
+        "build": "node scripts/build-client.js && node --check server.js",
         "build:client": "node scripts/build-client.js",
         "dev": "npx nodemon server.js",
         "start": "node server.js"

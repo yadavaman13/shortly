@@ -1,3 +1,4 @@
+import path from 'path';
 import express from 'express';
 import morgan from 'morgan';
 import urlRouter from './modules/url/routes/url.routes.js';
@@ -6,6 +7,9 @@ import { globalLimiter } from './middleware/rateLimit.middleware.js';
 
 const app = express();
 
+const publicPath = path.join(import.meta.dirname, 'public');
+
+app.use(express.static(publicPath));
 app.use(express.json());
 app.use(morgan('combined'));
 app.use(globalLimiter);
@@ -13,14 +17,20 @@ app.use(globalLimiter);
 // API routes
 app.use('/api/url', urlRouter);
 
-// Root health
-app.get('/', (req, res) => {
-    res.status(200).json({
-        message: 'URL Shortener API is running',
+// Short code redirection
+app.get('/:shortCode', redirectUrl);
+
+// For SPA
+app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api')) {
+        return next();
+    }
+    const indexPath = path.join(publicPath, 'index.html');
+    res.sendFile(indexPath, (err) => {
+        if (err) {
+            next();
+        }
     });
 });
-
-// Root-level short code redirection (e.g. http://localhost:3000/:shortCode)
-app.get('/:shortCode', redirectUrl);
 
 export default app;

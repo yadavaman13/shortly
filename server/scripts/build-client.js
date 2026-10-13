@@ -1,8 +1,9 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-const currentDir = import.meta.dirname;
+const currentDir = import.meta.dirname || path.dirname(fileURLToPath(import.meta.url));
 const clientDir = path.resolve(currentDir, '../../client');
 const targetPublicDir = path.resolve(currentDir, '../src/public');
 
