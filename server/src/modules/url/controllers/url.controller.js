@@ -101,7 +101,20 @@ export async function redirectUrl(req, res) {
 
 export async function getAllUrls(req, res) {
     try {
-        const urls = await urlModel.find().sort({ createdAt: -1 });
+        const { search, q } = req.query;
+        const queryTerm = (search || q || '').trim();
+
+        let filter = {};
+        if (queryTerm) {
+            // Escape regex special characters to prevent regex injection
+            const escaped = queryTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const searchRegex = new RegExp(escaped, 'i');
+            filter = {
+                $or: [{ shortUrl: searchRegex }, { originalUrl: searchRegex }],
+            };
+        }
+
+        const urls = await urlModel.find(filter).sort({ createdAt: -1 });
 
         return res.status(200).json({
             message: 'URLs fetched successfully',

@@ -247,15 +247,15 @@ The web app will run at **`http://localhost:5173`**. Requests made to `/api/*` a
 
 ### Endpoints Overview
 
-| Method   | Endpoint                       | Description                                      | Rate Limit       |
-| :------- | :----------------------------- | :----------------------------------------------- | :--------------- |
-| `GET`    | `/`                            | API status check & endpoint sitemap              | 200 req / 15 min |
-| `POST`   | `/api/url`                     | Create a new shortened link                      | 10 req / 1 min   |
-| `GET`    | `/api/url`                     | List all shortened links (newest first)          | 200 req / 15 min |
-| `GET`    | `/api/url/:id`                 | Get single URL by MongoDB `_id` or `shortUrl`    | 200 req / 15 min |
-| `DELETE` | `/api/url/:id`                 | Delete a URL by MongoDB `_id` or `shortUrl`      | 200 req / 15 min |
-| `GET`    | `/:shortCode`                  | Root redirect to destination + atomic click `+1` | 60 req / 1 min   |
-| `GET`    | `/api/url/redirect/:shortCode` | API redirect to destination + atomic click `+1`  | 60 req / 1 min   |
+| Method   | Endpoint                       | Description                                         | Rate Limit       |
+| :------- | :----------------------------- | :-------------------------------------------------- | :--------------- |
+| `GET`    | `/`                            | API status check & endpoint sitemap                 | 200 req / 15 min |
+| `POST`   | `/api/url`                     | Create a new shortened link                         | 10 req / 1 min   |
+| `GET`    | `/api/url`                     | List all shortened links or search (`?search=term`) | 200 req / 15 min |
+| `GET`    | `/api/url/:id`                 | Get single URL by MongoDB `_id` or `shortUrl`       | 200 req / 15 min |
+| `DELETE` | `/api/url/:id`                 | Delete a URL by MongoDB `_id` or `shortUrl`         | 200 req / 15 min |
+| `GET`    | `/:shortCode`                  | Root redirect to destination + atomic click `+1`    | 60 req / 1 min   |
+| `GET`    | `/api/url/redirect/:shortCode` | API redirect to destination + atomic click `+1`     | 60 req / 1 min   |
 
 ---
 
@@ -306,10 +306,14 @@ _Note: The `clicks` metric is automatically incremented in MongoDB via `$inc: { 
 
 ---
 
-#### 3. Fetch All URLs
+#### 3. Fetch All URLs / Search
 
 ```bash
+# Fetch all URLs (sorted newest first)
 curl http://localhost:3000/api/url
+
+# Or search URLs matching a specific term or short code
+curl "http://localhost:3000/api/url?search=github"
 ```
 
 **Response (`200 OK`):**
@@ -423,4 +427,3 @@ Formatting rules are specified in [.prettierrc](file:///.prettierrc):
 - Bracket Spacing: `true`
 
 ---
-

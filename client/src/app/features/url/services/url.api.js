@@ -40,17 +40,36 @@ export async function getShortenUrlById(id) {
 }
 
 /**
- * Fetches all saved shortened URLs
+ * Fetches all saved shortened URLs, or filters by search query
+ * @param {string} [search] - Optional search query
+ * @param {object} [options] - Optional axios request options (e.g. signal for AbortController)
  * @returns {Promise<object>} List of URLs
  */
-export async function getAllUrls() {
+export async function getAllUrls(search, options = {}) {
     try {
-        const response = await urlApiInstance.get('/');
+        const params = search && search.trim() ? { search: search.trim() } : {};
+        const response = await urlApiInstance.get('/', {
+            params,
+            ...options,
+        });
         return response.data;
     } catch (err) {
+        if (axios.isCancel(err) || err.name === 'CanceledError') {
+            throw err;
+        }
         console.error('Error occurred while fetching all URLs:', err);
         throw err.response?.data || { error: err.message || 'Network error' };
     }
+}
+
+/**
+ * Searches shortened URLs by query string via API
+ * @param {string} query - Search term
+ * @param {object} [options] - Optional axios config options
+ * @returns {Promise<object>}
+ */
+export async function searchUrls(query, options = {}) {
+    return getAllUrls(query, options);
 }
 
 /**

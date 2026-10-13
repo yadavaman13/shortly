@@ -1,4 +1,4 @@
-import { Search, RefreshCw, SearchX, Inbox, X } from 'lucide-react';
+import { Search, RefreshCw, SearchX, Inbox, X, Loader2 } from 'lucide-react';
 import { useUrls } from '../../hooks/index.js';
 import { UrlCard } from '../UrlCard/UrlCard.jsx';
 import './UrlList.scss';
@@ -9,6 +9,7 @@ export const UrlList = () => {
         allUrls,
         searchQuery,
         setSearchQuery,
+        isSearching,
         loading,
         deletingId,
         removeUrl,
@@ -28,7 +29,11 @@ export const UrlList = () => {
                 <div className="toolbar-actions">
                     <div className="search-wrapper">
                         <span className="search-icon">
-                            <Search size={14} />
+                            {isSearching ? (
+                                <Loader2 size={14} className="spin" />
+                            ) : (
+                                <Search size={14} />
+                            )}
                         </span>
                         <input
                             type="text"
