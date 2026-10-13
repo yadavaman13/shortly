@@ -57,8 +57,8 @@
         }
 
         .short-url-text {
-            font-family: var(--font-mono);
-            font-size: 1.125rem;
+            font-family: var(--font-sans);
+            font-size: 1.05rem;
             font-weight: 600;
             color: var(--text-primary);
             letter-spacing: -0.01em;
@@ -124,8 +124,8 @@
             @include text-truncate;
             max-width: 500px;
             color: var(--text-secondary);
-            font-family: var(--font-mono);
-            font-size: 0.775rem;
+            font-family: var(--font-sans);
+            font-size: 0.8rem;
 
             &:hover {
                 text-decoration: underline;

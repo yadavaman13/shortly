@@ -41,7 +41,7 @@
         flex-wrap: wrap;
 
         .short-code-link {
-            font-family: var(--font-mono);
+            font-family: var(--font-sans);
             font-size: 1rem;
             font-weight: 600;
             color: var(--text-primary);
@@ -58,7 +58,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.3rem;
-            font-family: var(--font-mono);
+            font-family: var(--font-sans);
             font-size: 0.75rem;
             font-weight: 600;
             padding: 0.2rem 0.55rem;
@@ -84,7 +84,7 @@
         .target-url {
             @include text-truncate;
             color: var(--text-secondary);
-            font-family: var(--font-mono);
+            font-family: var(--font-sans);
             font-size: 0.775rem;
 
             &:hover {

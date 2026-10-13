@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
     Copy,
     Check,
-    ExternalLink,
     Trash2,
     MousePointerClick,
     CornerDownRight,
@@ -44,7 +43,6 @@ export const UrlCard = ({ item, onDelete, isDeleting }) => {
                         className="short-code-link"
                     >
                         /{item.shortUrl}
-                        <ExternalLink size={12} />
                     </a>
 
                     <span className="clicks-badge">
@@ -79,17 +77,6 @@ export const UrlCard = ({ item, onDelete, isDeleting }) => {
                 >
                     {isCopied(item.shortUrl) ? <Check size={14} /> : <Copy size={14} />}
                 </button>
-
-                <a
-                    href={fullShortUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-icon"
-                    title="Open short link"
-                    aria-label="Open short link"
-                >
-                    <ExternalLink size={14} />
-                </a>
 
                 <button
                     type="button"

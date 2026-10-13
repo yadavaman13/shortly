@@ -53,7 +53,7 @@ export const Navbar = () => {
                     </button>
 
                     <a
-                        href="https://github.com/yadavaman13/url-shortner"
+                        href="https://github.com/yadavaman13/shortly"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="nav-btn"
