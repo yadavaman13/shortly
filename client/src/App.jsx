@@ -12,11 +12,11 @@ function AppContent() {
             <main className="main-content">
                 <section className="hero-section">
                     <h1 className="hero-title">
-                        A cleaner web with <span className="highlight">shorter links</span>.
+                        Tired of sharing <span className="highlight">long, messy links</span>?
                     </h1>
                     <p className="hero-description">
-                        Instant 6-character links with collision-safe generation and real-time
-                        atomic visit analytics.
+                        Turn them into short, clean links you can share anywhere. Track clicks
+                        and keep your links simple, all in one place.
                     </p>
                 </section>
 
