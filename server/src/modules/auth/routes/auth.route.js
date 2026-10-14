@@ -1,5 +1,5 @@
 import express from 'express';
-import { loginUser, registerUser } from '../controllers/auth.controller.js';
+import { loginUser, logoutUser, registerUser } from '../controllers/auth.controller.js';
 
 const authRouter = express.Router();
 
@@ -16,5 +16,12 @@ authRouter.post('/register', registerUser);
  * @access Private
  */
 authRouter.post('/login', loginUser);
+
+/**
+ * @route POST /api/auth/logout
+ * @desc logout
+ * @access Private
+ */
+authRouter.post('/logout', logoutUser)
 
 export default authRouter;

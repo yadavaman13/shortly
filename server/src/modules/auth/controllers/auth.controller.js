@@ -2,6 +2,7 @@ import userModel from '../../../models/user.model.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import envConfig from '../../../config/env.config.js';
+import blacklistTokenModel from '../../../models/blacklist.model.js';
 
 export async function registerUser(req, res) {
     try {
@@ -95,5 +96,30 @@ export async function loginUser(req, res) {
         return res.status(500).json({
             message: 'Internal server error',
         });
+    }
+}
+
+export async function logoutUser(req,res){
+    try{
+        const token = req.cookie.token;
+
+        if(!token){
+            return res.status(400).json({
+                message: "token is required for logging out"
+            })
+        }
+
+        await blacklistTokenModel.create({token})
+
+        res.clearCookie('token');
+
+        return res.status(200).json({
+            message: "logged out successfully"
+        })
+    } catch(err){
+        console.log("Error in logging out", err);
+        return res.status(500).json({
+            message: "Internal server error"
+        })
     }
 }
