@@ -1,0 +1,113 @@
+@use '../../../../../styles/variables' as *;
+@use '../../../../../styles/mixins' as *;
+
+.auth-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+
+            .input-icon {
+                position: absolute;
+                left: 0.875rem;
+                color: var(--text-muted);
+                pointer-events: none;
+            }
+
+            input {
+                width: 100%;
+                height: 2.75rem;
+                padding: 0 0.875rem 0 2.5rem;
+                background-color: var(--bg-tertiary);
+                border: 1px solid var(--border-subtle);
+                border-radius: $border-radius-md;
+                color: var(--text-primary);
+                font-family: inherit;
+                font-size: 0.9375rem;
+                transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+
+                &::placeholder {
+                    color: var(--text-subtle);
+                }
+
+                &:focus {
+                    outline: none;
+                    border-color: var(--border-strong);
+                    box-shadow: var(--focus-ring);
+                }
+            }
+
+            .toggle-password {
+                @include button-reset;
+                position: absolute;
+                right: 0.875rem;
+                color: var(--text-muted);
+                display: flex;
+                align-items: center;
+                padding: 0.25rem;
+
+                &:hover {
+                    color: var(--text-primary);
+                }
+            }
+        }
+    }
+
+    .form-error {
+        padding: 0.75rem 1rem;
+        background-color: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: $border-radius-md;
+        color: #ef4444;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .submit-btn {
+        @include button-reset;
+        width: 100%;
+        height: 2.75rem;
+        background-color: var(--accent-black);
+        color: var(--accent-white);
+        border-radius: $border-radius-md;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: opacity var(--transition-fast), transform var(--transition-fast);
+
+        &:hover:not(:disabled) {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        &:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    }
+}
