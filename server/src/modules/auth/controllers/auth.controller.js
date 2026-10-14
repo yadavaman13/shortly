@@ -125,26 +125,47 @@ export async function logoutUserController(req, res) {
 }
 
 export async function getMeController(req, res) {
-    const token = req.cookies.token;
+    try {
+        const token = req.cookies?.token;
 
-    const decoded = await jwt.verify(token, envConfig.JWT_SECRET);
+        if (!token) {
+            return res.status(401).json({
+                message: 'token not provided',
+            });
+        }
 
-    if (!decoded) {
-        return res.status(400).json({
-            message: 'invalid token',
+        const isTokenBlacklisted = await blacklistTokenModel.findOne({ token });
+        if (isTokenBlacklisted) {
+            return res.status(401).json({
+                message: 'invalid token',
+            });
+        }
+
+        const decoded = jwt.verify(token, envConfig.JWT_SECRET);
+        if (!decoded || !decoded.id) {
+            return res.status(401).json({
+                message: 'invalid token',
+            });
+        }
+
+        const user = await userModel.findById(decoded.id);
+        if (!user) {
+            return res.status(404).json({
+                message: 'user not found',
+            });
+        }
+
+        return res.status(200).json({
+            message: 'user fetched successfully',
+            data: {
+                username: user.username,
+                email: user.email,
+            },
+            token,
+        });
+    } catch (err) {
+        return res.status(401).json({
+            message: 'invalid or expired token',
         });
     }
-
-    const id = decoded.id;
-
-    const user = await userModel.findById(id);
-
-    return res.status(200).json({
-        message: 'user fetched successfully',
-        data: {
-            username: user.username,
-            email: user.email,
-        },
-        token,
-    });
 }

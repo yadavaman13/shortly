@@ -94,7 +94,7 @@ export const validateRegister = [
         .notEmpty()
         .withMessage('username is required')
         .trim(),
-    
+
     body('email')
         .trim()
         .notEmpty()
@@ -106,9 +106,11 @@ export const validateRegister = [
         .trim()
         .notEmpty()
         .withMessage('password is required')
-        .isLength({min:8})
-        .withMessage('password must be of 8 length')
-]
+        .isLength({ min: 8 })
+        .withMessage('password must be of 8 length'),
+
+    handleValidationErrors,
+];
 
 /**
  * Validation rule for user login
@@ -116,15 +118,17 @@ export const validateRegister = [
 export const validateLogin = [
     body('email')
         .trim()
-        .isEmpty()
+        .notEmpty()
         .withMessage('email is required')
         .isEmail()
         .withMessage('enter a valid email'),
-    
+
     body('password')
         .trim()
-        .isEmpty()
+        .notEmpty()
         .withMessage('password is required')
-        .isLength({min:8})
-        .withMessage('password must be of length 8')
-]
+        .isLength({ min: 8 })
+        .withMessage('password must be of length 8'),
+
+    handleValidationErrors,
+];
