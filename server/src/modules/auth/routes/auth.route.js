@@ -1,5 +1,10 @@
 import express from 'express';
-import { getMeController, loginUserController, logoutUserController, registerUserController } from '../controllers/auth.controller.js';
+import {
+    getMeController,
+    loginUserController,
+    logoutUserController,
+    registerUserController,
+} from '../controllers/auth.controller.js';
 
 const authRouter = express.Router();
 
@@ -22,13 +27,13 @@ authRouter.post('/login', loginUserController);
  * @desc logout
  * @access Private
  */
-authRouter.post('/logout', logoutUserController)
+authRouter.post('/logout', logoutUserController);
 
 /**
  * @route POST /api/auth/me
  * @desc getme
  * @access Private
  */
-authRouter.get('/me', getMeController)
+authRouter.get('/me', getMeController);
 
 export default authRouter;

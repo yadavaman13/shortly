@@ -99,52 +99,52 @@ export async function loginUserController(req, res) {
     }
 }
 
-export async function logoutUserController(req,res){
-    try{
+export async function logoutUserController(req, res) {
+    try {
         const token = req.cookies.token;
 
-        if(!token){
+        if (!token) {
             return res.status(400).json({
-                message: "token is required for logging out"
-            })
+                message: 'token is required for logging out',
+            });
         }
 
-        await blacklistTokenModel.create({token})
+        await blacklistTokenModel.create({ token });
 
         res.clearCookie('token');
 
         return res.status(200).json({
-            message: "logged out successfully"
-        })
-    } catch(err){
-        console.log("Error in logging out", err);
+            message: 'logged out successfully',
+        });
+    } catch (err) {
+        console.log('Error in logging out', err);
         return res.status(500).json({
-            message: "Internal server error"
-        })
+            message: 'Internal server error',
+        });
     }
 }
 
-export async function getMeController(req,res){
+export async function getMeController(req, res) {
     const token = req.cookies.token;
 
     const decoded = await jwt.verify(token, envConfig.JWT_SECRET);
 
-    if(!decoded){
+    if (!decoded) {
         return res.status(400).json({
-            message: "invalid token"
-        })
+            message: 'invalid token',
+        });
     }
 
     const id = decoded.id;
 
-    const user = await userModel.findById(id)
+    const user = await userModel.findById(id);
 
     return res.status(200).json({
-        message: "user fetched successfully",
-        data:{
+        message: 'user fetched successfully',
+        data: {
             username: user.username,
-            email: user.email
+            email: user.email,
         },
-        token
-    })
+        token,
+    });
 }

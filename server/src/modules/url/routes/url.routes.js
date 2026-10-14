@@ -12,6 +12,7 @@ import {
     validateShortCodeParam,
 } from '../../../middleware/validate.middleware.js';
 import { createUrlLimiter, redirectLimiter } from '../../../middleware/rateLimit.middleware.js';
+import { authUser } from '../../../middleware/auth.middleware.js';
 
 const urlRouter = express.Router();
 
@@ -21,14 +22,14 @@ const urlRouter = express.Router();
  * @access  Public
  * @rateLimit 10 requests/minute per IP
  */
-urlRouter.post('/', createUrlLimiter, validateCreateUrl, createShortenUrl);
+urlRouter.post('/', authUser, createUrlLimiter, validateCreateUrl, createShortenUrl);
 
 /**
  * @route   GET /api/url
  * @desc    Get all shortened URLs
  * @access  Public
  */
-urlRouter.get('/', getAllUrls);
+urlRouter.get('/', authUser, getAllUrls);
 
 /**
  * @route   GET /api/url/redirect/:shortCode
@@ -36,20 +37,20 @@ urlRouter.get('/', getAllUrls);
  * @access  Public
  * @rateLimit 60 requests/minute per IP
  */
-urlRouter.get('/redirect/:shortCode', redirectLimiter, validateShortCodeParam, redirectUrl);
+urlRouter.get('/redirect/:shortCode', authUser, redirectLimiter, validateShortCodeParam, redirectUrl);
 
 /**
  * @route   GET /api/url/:id
  * @desc    Get a single URL by MongoDB ID or short code
  * @access  Public
  */
-urlRouter.get('/:id', validateIdParam, getUrlById);
+urlRouter.get('/:id', authUser, validateIdParam, getUrlById);
 
 /**
  * @route   DELETE /api/url/:id
  * @desc    Delete a URL by MongoDB ID or short code
  * @access  Public
  */
-urlRouter.delete('/:id', validateIdParam, deleteUrl);
+urlRouter.delete('/:id', authUser, validateIdParam, deleteUrl);
 
 export default urlRouter;
