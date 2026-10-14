@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link2, Moon, Sun } from 'lucide-react';
+import { Moon, Sun, LogOut, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../features/auth/hooks/useAuth.js';
 import './Navbar.scss';
 
 const GithubIcon = ({ size = 15, ...props }) => (
@@ -20,6 +22,9 @@ const GithubIcon = ({ size = 15, ...props }) => (
 );
 
 export const Navbar = () => {
+    const { user, isAuthenticated, logout } = useAuth();
+    const navigate = useNavigate();
+
     const [theme, setTheme] = useState(() => {
         return localStorage.getItem('shortly-theme') || 'dark';
     });
@@ -33,14 +38,30 @@ export const Navbar = () => {
         setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
     };
 
+    const handleLogout = async () => {
+        await logout();
+        navigate('/login', { replace: true });
+    };
+
+    const initial = user?.username ? user.username.charAt(0).toUpperCase() : 'U';
+
     return (
         <header className="app-navbar">
             <div className="navbar-inner">
                 <div className="brand-wrap">
-                    <span className="brand-text">Url Shortner</span>
+                    <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <span className="brand-text">Url Shortner</span>
+                    </Link>
                 </div>
 
                 <div className="navbar-right">
+                    {isAuthenticated && user && (
+                        <div className="user-badge" title={`Logged in as ${user.username}`}>
+                            <span className="user-avatar">{initial}</span>
+                            <span className="user-name">{user.username}</span>
+                        </div>
+                    )}
+
                     <button
                         type="button"
                         className="nav-btn"
@@ -51,6 +72,24 @@ export const Navbar = () => {
                         {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
                         <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
                     </button>
+
+                    {isAuthenticated ? (
+                        <button
+                            type="button"
+                            className="nav-btn"
+                            onClick={handleLogout}
+                            title="Sign out of your account"
+                            aria-label="Logout"
+                        >
+                            <LogOut size={15} />
+                            <span>Logout</span>
+                        </button>
+                    ) : (
+                        <Link to="/login" className="nav-btn" title="Sign In">
+                            <User size={15} />
+                            <span>Sign In</span>
+                        </Link>
+                    )}
 
                     <a
                         href="https://github.com/yadavaman13/shortly"
@@ -68,3 +107,4 @@ export const Navbar = () => {
 };
 
 export default Navbar;
+
