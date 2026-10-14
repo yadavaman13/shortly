@@ -1,36 +1,17 @@
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from './app/features/auth/context/authContext.jsx';
 import { UrlProvider } from './app/features/url/context/urlContext.jsx';
-import { UrlForm, UrlResult, UrlStats, UrlList } from './app/features/url/components/index.js';
 import { Navbar, Toast, Footer } from './app/components/index.js';
+import AppRoutes from './app.routes.jsx';
 import './App.scss';
 
-function AppContent() {
+function AppLayout() {
     return (
         <div className="app-container">
             <div className="app-bg-grid" aria-hidden="true" />
             <Navbar />
-
-            <main className="main-content">
-                <section className="hero-section">
-                    <h1 className="hero-title">
-                        Tired of sharing <span className="highlight">long, messy links</span>?
-                    </h1>
-                    <p className="hero-description">
-                        Turn them into short, clean links you can share anywhere. Track clicks and
-                        keep your links simple, all in one place.
-                    </p>
-                </section>
-
-                <UrlStats />
-
-                <UrlForm />
-
-                <UrlResult />
-
-                <UrlList />
-            </main>
-
+            <AppRoutes />
             <Footer />
-
             <Toast />
         </div>
     );
@@ -38,10 +19,15 @@ function AppContent() {
 
 export function App() {
     return (
-        <UrlProvider>
-            <AppContent />
-        </UrlProvider>
+        <BrowserRouter>
+            <AuthProvider>
+                <UrlProvider>
+                    <AppLayout />
+                </UrlProvider>
+            </AuthProvider>
+        </BrowserRouter>
     );
 }
 
 export default App;
+

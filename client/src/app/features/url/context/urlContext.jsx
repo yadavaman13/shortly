@@ -38,6 +38,10 @@ export const UrlProvider = ({ children }) => {
             const list = response?.data?.urls || response?.urls || [];
             setUrls(list);
         } catch (err) {
+            if (err?.status === 401 || err?.statusCode === 401 || err?.message === 'token not provided') {
+                setUrls([]);
+                return;
+            }
             console.error('Failed to fetch URLs:', err);
             const msg = err.error || err.message || 'Failed to fetch URLs';
             setError(msg);
