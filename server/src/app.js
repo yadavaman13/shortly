@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import urlRouter from './modules/url/routes/url.routes.js';
 import { redirectUrl } from './modules/url/controllers/url.controller.js';
 import { globalLimiter } from './middleware/rateLimit.middleware.js';
+import authRouter from './modules/auth/routes/auth.route.js';
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(globalLimiter);
 
 // API routes
 app.use('/api/url', urlRouter);
+app.use('/api/auth', authRouter);
 
 // Short code redirection
 app.get('/:shortCode', redirectUrl);

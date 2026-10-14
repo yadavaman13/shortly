@@ -1,4 +1,4 @@
-# Shortly - URL Shortener
+<h1 align="center">Shortly - URL Shortener</h1>
 
 [![React](https://img.shields.io/badge/React-19.1.0-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-6.3.5-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -12,7 +12,7 @@ A high-performance, full-stack URL shortening service and analytics engine built
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
 - [Key Highlights](#-key-highlights)
 - [System Architecture](#-system-architecture)
@@ -33,7 +33,7 @@ A high-performance, full-stack URL shortening service and analytics engine built
 
 ---
 
-## ⚡ Key Highlights
+## Key Highlights
 
 - **Collision-Safe 6-Character Slugs**: Automatically derives randomized base62-style alphanumeric slugs (`[a-zA-Z0-9]`), offering over 56.8 billion unique combinations.
 - **Atomic Click Analytics**: Every redirection executes an atomic `$inc` operation on MongoDB, preventing race conditions even under concurrent load.
@@ -47,7 +47,7 @@ A high-performance, full-stack URL shortening service and analytics engine built
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```
                                  ┌─────────────────────────┐
@@ -88,7 +88,7 @@ A high-performance, full-stack URL shortening service and analytics engine built
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 
@@ -114,7 +114,7 @@ A high-performance, full-stack URL shortening service and analytics engine built
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 url-shortner/
@@ -175,7 +175,7 @@ url-shortner/
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -243,7 +243,7 @@ The web app will run at **`http://localhost:5173`**. Requests made to `/api/*` a
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 ### Endpoints Overview
 
@@ -383,7 +383,7 @@ curl -X DELETE http://localhost:3000/api/url/aB3eZ1
 
 ---
 
-## 🎨 Frontend Features & User Experience
+## Frontend Features & User Experience
 
 - **Minimalist Aesthetic**: Engineered with a high-contrast black-and-white visual hierarchy, subtle borders, dot-grid background, and soft depth shadows.
 - **Dark Mode Support**: Seamless toggle between Light and Dark themes stored in `localStorage`, adhering to system preferences.
@@ -395,7 +395,7 @@ curl -X DELETE http://localhost:3000/api/url/aB3eZ1
 
 ---
 
-## 🛡️ Security & Traffic Governance
+## Security & Traffic Governance
 
 - **IP-Based Rate Limiting**:
     - `globalLimiter`: Protects all routes against general flooding (200 requests / 15 minutes).
@@ -406,7 +406,7 @@ curl -X DELETE http://localhost:3000/api/url/aB3eZ1
 
 ---
 
-## 🧼 Code Quality & Formatting
+## Code Quality & Formatting
 
 The monorepo contains shared code style standards configured with Prettier and ESLint:
 

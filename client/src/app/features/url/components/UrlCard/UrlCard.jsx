@@ -1,12 +1,5 @@
 import { useState } from 'react';
-import {
-    Copy,
-    Check,
-    Trash2,
-    MousePointerClick,
-    CornerDownRight,
-    Loader2,
-} from 'lucide-react';
+import { Copy, Check, Trash2, MousePointerClick, CornerDownRight, Loader2 } from 'lucide-react';
 import { useClipboard } from '../../hooks/index.js';
 import './UrlCard.scss';
 

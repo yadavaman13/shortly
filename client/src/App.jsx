@@ -15,8 +15,8 @@ function AppContent() {
                         Tired of sharing <span className="highlight">long, messy links</span>?
                     </h1>
                     <p className="hero-description">
-                        Turn them into short, clean links you can share anywhere. Track clicks
-                        and keep your links simple, all in one place.
+                        Turn them into short, clean links you can share anywhere. Track clicks and
+                        keep your links simple, all in one place.
                     </p>
                 </section>
 

@@ -42,7 +42,7 @@ export async function createShortenUrl(req, res) {
             shortUrl: shortCode,
         });
 
-        const serverUrl = (envConfig.SERVER_URL || 'http://localhost:3000').replace(/\/$/, '');
+        const serverUrl = envConfig.SERVER_URL.replace(/\/$/, '');
         const fullShortUrl = `${serverUrl}/${newUrl.shortUrl}`;
 
         return res.status(201).json({
