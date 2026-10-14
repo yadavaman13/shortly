@@ -85,3 +85,46 @@ export const validateShortCodeParam = [
 
     handleValidationErrors,
 ];
+
+/**
+ * Validation rule for user registration
+ */
+export const validateRegister = [
+    body('username')
+        .notEmpty()
+        .withMessage('username is required')
+        .trim(),
+    
+    body('email')
+        .trim()
+        .notEmpty()
+        .withMessage('email is required')
+        .isEmail()
+        .withMessage('enter a valid email'),
+
+    body('password')
+        .trim()
+        .notEmpty()
+        .withMessage('password is required')
+        .isLength({min:8})
+        .withMessage('password must be of 8 length')
+]
+
+/**
+ * Validation rule for user login
+ */
+export const validateLogin = [
+    body('email')
+        .trim()
+        .isEmpty()
+        .withMessage('email is required')
+        .isEmail()
+        .withMessage('enter a valid email'),
+    
+    body('password')
+        .trim()
+        .isEmpty()
+        .withMessage('password is required')
+        .isLength({min:8})
+        .withMessage('password must be of length 8')
+]

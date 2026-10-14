@@ -5,6 +5,7 @@ import {
     logoutUserController,
     registerUserController,
 } from '../controllers/auth.controller.js';
+import { validateLogin, validateRegister } from '../../../middleware/validate.middleware.js';
 
 const authRouter = express.Router();
 
@@ -13,14 +14,14 @@ const authRouter = express.Router();
  * @desc user registration
  * @access Private
  */
-authRouter.post('/register', registerUserController);
+authRouter.post('/register', validateRegister, registerUserController);
 
 /**
  * @route POST /api/auth/login
  * @desc user login
  * @access Private
  */
-authRouter.post('/login', loginUserController);
+authRouter.post('/login', validateLogin, loginUserController);
 
 /**
  * @route POST /api/auth/logout
