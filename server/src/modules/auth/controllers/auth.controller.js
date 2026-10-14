@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import envConfig from '../../../config/env.config.js';
 import blacklistTokenModel from '../../../models/blacklist.model.js';
 
-export async function registerUser(req, res) {
+export async function registerUserController(req, res) {
     try {
         const { username, email, password } = req.body;
 
@@ -53,7 +53,7 @@ export async function registerUser(req, res) {
     }
 }
 
-export async function loginUser(req, res) {
+export async function loginUserController(req, res) {
     try {
         const { email, password } = req.body;
 
@@ -99,9 +99,9 @@ export async function loginUser(req, res) {
     }
 }
 
-export async function logoutUser(req,res){
+export async function logoutUserController(req,res){
     try{
-        const token = req.cookie.token;
+        const token = req.cookies.token;
 
         if(!token){
             return res.status(400).json({
@@ -122,4 +122,29 @@ export async function logoutUser(req,res){
             message: "Internal server error"
         })
     }
+}
+
+export async function getMeController(req,res){
+    const token = req.cookies.token;
+
+    const decoded = await jwt.verify(token, envConfig.JWT_SECRET);
+
+    if(!decoded){
+        return res.status(400).json({
+            message: "invalid token"
+        })
+    }
+
+    const id = decoded.id;
+
+    const user = await userModel.findById(id)
+
+    return res.status(200).json({
+        message: "user fetched successfully",
+        data:{
+            username: user.username,
+            email: user.email
+        },
+        token
+    })
 }

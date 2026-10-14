@@ -1,5 +1,5 @@
 import express from 'express';
-import { loginUser, logoutUser, registerUser } from '../controllers/auth.controller.js';
+import { getMeController, loginUserController, logoutUserController, registerUserController } from '../controllers/auth.controller.js';
 
 const authRouter = express.Router();
 
@@ -8,20 +8,27 @@ const authRouter = express.Router();
  * @desc user registration
  * @access Private
  */
-authRouter.post('/register', registerUser);
+authRouter.post('/register', registerUserController);
 
 /**
  * @route POST /api/auth/login
  * @desc user login
  * @access Private
  */
-authRouter.post('/login', loginUser);
+authRouter.post('/login', loginUserController);
 
 /**
  * @route POST /api/auth/logout
  * @desc logout
  * @access Private
  */
-authRouter.post('/logout', logoutUser)
+authRouter.post('/logout', logoutUserController)
+
+/**
+ * @route POST /api/auth/me
+ * @desc getme
+ * @access Private
+ */
+authRouter.get('/me', getMeController)
 
 export default authRouter;

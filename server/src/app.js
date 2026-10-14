@@ -1,6 +1,7 @@
 import path from 'path';
 import express from 'express';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import urlRouter from './modules/url/routes/url.routes.js';
 import { redirectUrl } from './modules/url/controllers/url.controller.js';
 import { globalLimiter } from './middleware/rateLimit.middleware.js';
@@ -12,6 +13,7 @@ const publicPath = path.join(import.meta.dirname, 'public');
 
 app.use(express.static(publicPath));
 app.use(express.json());
+app.use(cookieParser());
 app.use(morgan('combined'));
 app.use(globalLimiter);
 
