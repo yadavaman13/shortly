@@ -1,0 +1,55 @@
+@use '../../../../../styles/variables' as *;
+@use '../../../../../styles/mixins' as *;
+
+.auth-page-container {
+    min-height: calc(100vh - 140px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1rem;
+
+    .auth-card {
+        @include card-surface;
+        width: 100%;
+        max-width: 420px;
+        padding: 2.25rem 2rem;
+        box-shadow: var(--card-shadow);
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+
+            .auth-title {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--text-primary);
+                margin-bottom: 0.5rem;
+                letter-spacing: -0.02em;
+            }
+
+            .auth-subtitle {
+                font-size: 0.875rem;
+                color: var(--text-muted);
+            }
+        }
+
+        .auth-footer {
+            margin-top: 1.75rem;
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+
+            a {
+                color: var(--text-primary);
+                font-weight: 600;
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                transition: opacity var(--transition-fast);
+
+                &:hover {
+                    opacity: 0.8;
+                }
+            }
+        }
+    }
+}
