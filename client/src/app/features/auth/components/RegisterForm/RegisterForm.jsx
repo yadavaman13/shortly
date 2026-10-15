@@ -60,7 +60,7 @@ export const RegisterForm = ({ onSuccess }) => {
                         name="username"
                         value={formData.username}
                         onChange={handleChange}
-                        placeholder="johndoe"
+                        placeholder="Enter your username"
                         autoComplete="username"
                         required
                         disabled={submitting}
@@ -78,7 +78,7 @@ export const RegisterForm = ({ onSuccess }) => {
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        placeholder="you@example.com"
+                        placeholder="Enter your email"
                         autoComplete="email"
                         required
                         disabled={submitting}
@@ -96,7 +96,7 @@ export const RegisterForm = ({ onSuccess }) => {
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        placeholder="At least 8 characters"
+                        placeholder="Enter your password"
                         autoComplete="new-password"
                         required
                         disabled={submitting}
