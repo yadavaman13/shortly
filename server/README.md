@@ -1,252 +1,354 @@
-# Shortly Server API
+# Shortly Server — In-Depth Architecture & Implementation
 
-Production-ready, modular REST API and redirection service for the **Shortly** URL Shortener, engineered with **Node.js**, **Express 5**, and **MongoDB (Mongoose 9)**.
+A production-grade, modular backend service and high-throughput redirection engine powering the **Shortly** URL shortening platform. Built with **Node.js (ES Modules)**, **Express 5**, and **MongoDB (Mongoose 9)**.
 
 ---
 
-## Architecture Overview
+## Table of Contents
 
-The backend uses an ES Module (ESM) architecture with a layered design separating configuration, database models, request validation, rate limiting, and business controllers.
+- [Architectural Overview](#-architectural-overview)
+    - [Request Lifecycle & Middleware Pipeline](#request-lifecycle--middleware-pipeline)
+    - [Design Philosophy](#design-philosophy)
+- [Module Architecture & Directory Breakdown](#-module-architecture--directory-breakdown)
+- [Authentication & Session Engine](#-authentication--session-engine)
+    - [Bcrypt Password Hashing](#1-bcrypt-password-hashing)
+    - [JWT Token Strategy](#2-jwt-token-strategy)
+    - [Blacklist Token Revocation (Stateful Logout)](#3-blacklist-token-revocation-stateful-logout)
+    - [Authentication Middleware (`authUser`)](#4-authentication-middleware-authuser)
+- [URL Engine & Redirection Mechanism](#-url-engine--redirection-mechanism)
+    - [Base62 Slug Generation & Collision Resistance](#1-base62-slug-generation--collision-resistance)
+    - [Atomic Visit Tracking (`$inc`)](#2-atomic-visit-tracking-inc)
+    - [Dual Redirection Endpoints](#3-dual-redirection-endpoints)
+    - [Browser Prefetch Filtering (`favicon.ico`)](#4-browser-prefetch-filtering-faviconico)
+    - [Dual-Identifier Lookup Strategy](#5-dual-identifier-lookup-strategy)
+    - [ReDoS-Safe URL Search](#6-redos-safe-url-search)
+- [Validation & Traffic Control](#-validation--traffic-control)
+    - [express-validator Middleware](#1-express-validator-middleware)
+    - [Standardized 422 Error Envelope](#2-standardized-422-error-envelope)
+    - [Tiered Rate Limiting](#3-tiered-rate-limiting)
+- [Database Models & Indexing](#-database-models--indexing)
+    - [`users` Model](#1-users-model)
+    - [`urls` Model](#2-urls-model)
+    - [`blacklistTokens` Model](#3-blacklisttokens-model)
+- [Configuration & Bootstrapping](#-configuration--bootstrapping)
+    - [Strict Environment Assertions](#strict-environment-assertions)
+    - [MongoDB Connection Resilience](#mongodb-connection-resilience)
+- [Single-Port Full-Stack Deployment](#-single-port-full-stack-deployment)
+    - [The Client Build Pipeline (`scripts/build-client.js`)](#the-client-build-pipeline-scriptsbuild-clientjs)
+    - [SPA Fallback Routing in Express 5](#spa-fallback-routing-in-express-5)
+- [Complete API Reference](#-complete-api-reference)
+    - [Authentication API (`/api/auth`)](#1-authentication-api-apiauth)
+    - [URL Management API (`/api/url`)](#2-url-management-api-apiurl)
+    - [Public Redirection (`/:shortCode`)](#3-public-redirection-shortcode)
+- [HTTP Status Code Matrix](#-http-status-code-matrix)
+- [Development & Operations](#-development--operations)
 
+---
+
+## Architectural Overview
+
+The Shortly backend follows a modular, layer-separated architecture using native **ES Modules** (`"type": "module"` in `package.json`). Code is organized by domain modules (`auth`, `url`), clean cross-cutting middleware (validation, rate limiting, authentication), centralized models, and environment safety checks.
+
+### Request Lifecycle & Middleware Pipeline
+
+```text
+                                    ┌──────────────────────────────┐
+                                    │    Incoming HTTP Request     │
+                                    └──────────────┬───────────────┘
+                                                   │
+                                                   ▼
+                                    ┌──────────────────────────────┐
+                                    │      express.static()        │  Serves assets from src/public
+                                    └──────────────┬───────────────┘
+                                                   │
+                                                   ▼
+                                    ┌──────────────────────────────┐
+                                    │ express.json() & cookieParser│  Body parsing & Cookie decoding
+                                    └──────────────┬───────────────┘
+                                                   │
+                                                   ▼
+                                    ┌──────────────────────────────┐
+                                    │       morgan('combined')     │  HTTP Access Logging
+                                    └──────────────┬───────────────┘
+                                                   │
+                                                   ▼
+                                    ┌──────────────────────────────┐
+                                    │        globalLimiter         │  200 requests / 15 min per IP
+                                    └──────────────┬───────────────┘
+                                                   │
+           ┌───────────────────────────────────────┼────────────────────────────────────────┐
+           │                                       │                                        │
+           ▼                                       ▼                                        ▼
+┌──────────────────────┐               ┌──────────────────────┐                ┌─────────────────────────┐
+│   /api/auth Router   │               │   /api/url Router    │                │  GET /:shortCode        │
+│                      │               │                      │                │  (Public Redirection)   │
+│  - /register (Val)   │               │  - authUser Guard    │                └────────────┬────────────┘
+│  - /login (Val)      │               │  - Route Rate Limit  │                             │
+│  - /logout           │               │  - express-validator │                             ▼
+│  - /me (JWT Check)   │               │  - URL Controller    │                ┌─────────────────────────┐
+└──────────┬───────────┘               └──────────┬───────────┘                │ findOneAndUpdate($inc)  │
+           │                                      │                            │ 302 Redirect Location   │
+           └───────────────────┬──────────────────┘                            └─────────────────────────┘
+                               │
+                               ▼
+                ┌─────────────────────────────┐
+                │     Mongoose 9 ODM Layer    │
+                │     (MongoDB Atlas/Local)   │
+                └──────────────┬──────────────┘
+                               │
+                               ▼
+        ┌──────────────────────────────────────────────┐
+        │        SPA Fallback Route (Wildcard GET)     │
+        │  Sends server/src/public/index.html for non- │
+        │  API browser routes (e.g. /login, /register) │
+        └──────────────────────────────────────────────┘
 ```
-                      ┌─────────────────────────────────────────┐
-                      │             Incoming Request            │
-                      └────────────────────┬────────────────────┘
-                                           │
-                                           ▼
-                      ┌─────────────────────────────────────────┐
-                      │    Global Middleware (JSON, Morgan)     │
-                      └────────────────────┬────────────────────┘
-                                           │
-                                           ▼
-                      ┌─────────────────────────────────────────┐
-                      │  Global Rate Limiter (200 req / 15 min) │
-                      └────────────────────┬────────────────────┘
-                                           │
-                        ┌──────────────────┴──────────────────┐
-                        ▼                                     ▼
-             [ /api/url Route Group ]                 [ Root Redirection ]
-                        │                                     │
-           ┌────────────┴────────────┐                        ▼
-           ▼                         ▼                 GET /:shortCode
-    Route Limiter             express-validator               │
-   (e.g., 10 req/min)        (Schema & Sanitization)          ▼
-           │                         │                  Atomic $inc &
-           └────────────┬────────────┘                  302 Redirect
-                        │
-                        ▼
-                Controller Actions
-         (create, list, getById, delete)
-                        │
-                        ▼
-                 Mongoose Model
-                 (MongoDB Atlas)
-```
+
+### Design Philosophy
+
+1. **Separation of Concerns**: Routes declare schemas and middleware chains; controllers handle business logic and status codes; models enforce persistence boundaries.
+2. **Defensive Validation**: Bad payloads are caught and rejected with descriptive field-level error messages before touching controller logic or database queries.
+3. **Atomic Concurrency**: Link visits update counters atomically at the database layer using MongoDB's `$inc` operator, preventing lost updates under concurrent access.
+4. **Resilient Defaults**: Strict startup validation ensures the application immediately crashes on launch if required secrets or connection strings are missing, rather than failing subtly during runtime.
 
 ---
 
-## Tech Stack & Dependencies
-
-### Core Framework & Runtime
-
-- **[Node.js](https://nodejs.org/)** (v18+) – High-performance JavaScript runtime with native ES Modules (`"type": "module"`).
-- **[Express 5](https://expressjs.com/)** (`v5.2.1`) – Next-generation web framework featuring native Promise/async-await error propagation, modernized routing, and lean middleware execution.
-
-### Database & ODM
-
-- **[MongoDB](https://www.mongodb.com/)** – Distributed NoSQL document database.
-- **[Mongoose 9](https://mongoosejs.com/)** (`v9.10.2`) – Object Data Modeling (ODM) library with schema validation, strict typing, and unique indexing.
-
-### Security, Validation & Traffic Control
-
-- **[express-rate-limit](https://github.com/express-rate-limit/express-rate-limit)** (`v8.7.0`) – Tiered IP-based rate limiting adhering to IETF Draft-7 RateLimit headers (`RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`).
-- **[express-validator](https://express-validator.github.io/)** (`v7.3.2`) – Schema-based request body and parameter validation with sanitized output and 422 Unprocessable Entity formatting.
-- **[cors](https://github.com/expressjs/cors)** (`v2.8.6`) – Cross-Origin Resource Sharing control.
-
-### Observability & Tooling
-
-- **[morgan](https://github.com/expressjs/morgan)** (`v1.12.1`) – Standard Apache `combined` format HTTP access logger.
-- **[dotenv](https://github.com/motdotla/dotenv)** (`v18.0.4`) – Runtime environment configuration loader with startup assertion checks.
-- **nodemon** – Hot-reloading development monitor.
-
----
-
-## Directory Structure
+## Module Architecture & Directory Breakdown
 
 ```text
 server/
+├── scripts/
+│   └── build-client.js               # Cross-platform build automation script
+│                                     # Invokes Vite build with client -> server/src/public output
 ├── src/
 │   ├── config/
-│   │   ├── db.js                     # MongoDB connection bootstrap & event logging
-│   │   └── env.config.js             # Environment variable validation & centralized export
+│   │   ├── db.js                     # MongoDB connection initialization and lifecycle logging
+│   │   └── env.config.js             # Centralized environment assertions and exports
 │   │
 │   ├── middleware/
-│   │   ├── rateLimit.middleware.js   # Tiered rate limiters (global, creation, redirect)
-│   │   └── validate.middleware.js    # express-validator chains & 422 error formatter
+│   │   ├── auth.middleware.js        # authUser JWT token verification and blacklist check
+│   │   ├── rateLimit.middleware.js   # express-rate-limit tiers (global, creation, redirect)
+│   │   └── validate.middleware.js    # express-validator schemas and 422 error interceptor
 │   │
 │   ├── models/
-│   │   └── url.model.js              # Mongoose schema with unique indexes & timestamps
+│   │   ├── blacklist.model.js        # Blacklisted JWT tokens schema (revoked sessions)
+│   │   ├── url.model.js              # Shortened URL schema with unique slug index and click counter
+│   │   └── user.model.js             # User account schema with hashed credentials
 │   │
 │   ├── modules/
+│   │   ├── auth/
+│   │   │   ├── controllers/
+│   │   │   │   └── auth.controller.js# register, login, logout, getMe controllers
+│   │   │   └── routes/
+│   │   │       └── auth.route.js     # /api/auth routing definitions
+│   │   │
 │   │   └── url/
 │   │       ├── controllers/
-│   │       │   └── url.controller.js # Endpoint logic (shorten, redirect, query, delete)
+│   │       │   └── url.controller.js # shorten, list, getById, delete, redirect controllers
 │   │       └── routes/
-│   │           └── url.routes.js     # Modular router with attached validators & limiters
+│   │           └── url.routes.js     # /api/url routing definitions
 │   │
 │   ├── utils/
 │   │   └── generateCode.js           # 6-character Base62 alphanumeric slug generator
 │   │
-│   └── app.js                        # Express application factory & middleware composition
+│   └── app.js                        # Express application composition, middleware, and SPA routing
 │
-├── .env                              # Environment secrets (git-ignored)
-├── package.json                      # Dependencies and lifecycle scripts
-├── README.md                         # Server documentation
-└── server.js                         # Application entrypoint & HTTP listener
+├── .env                              # Environment variables (git-ignored)
+├── package.json                      # Server scripts and dependencies
+├── README.md                         # Server documentation (you are here)
+└── server.js                         # Database connection bootstrapper and HTTP server listener
 ```
 
 ---
 
-## Implemented Features
+## Authentication & Session Engine
 
-### 1. Collision-Resistant 6-Character Slug Generation
+The authentication system combines stateless JWT tokens with stateful database revocation to provide both high verification speed and secure logout handling.
 
-- Generates random 6-character Base62 alphanumeric strings (`[a-zA-Z0-9]`), yielding $62^6 \approx 56.8\text{ billion}$ distinct combinations.
-- Uses an active collision verification loop against MongoDB with a maximum retry ceiling (5 attempts) before failing safely.
+### 1. Bcrypt Password Hashing
 
-### 2. High-Performance Atomic Redirection
+During user registration (`registerUserController`):
 
-- **Dual Redirection Routes**:
-    - `GET /:shortCode` (Root-level clean short link for direct user navigation).
-    - `GET /api/url/redirect/:shortCode` (API-namespaced redirect).
-- **Atomic Click Tracking**: Uses MongoDB's `$inc: { clicks: 1 }` via `findOneAndUpdate`, eliminating concurrency race conditions and separate read-write overhead.
-- **Favicon Query Bypass**: Explicitly intercepts and suppresses `GET /favicon.ico` browser prefetch requests (`204 No Content`) so analytics counts remain pristine.
+- The client-submitted password is verified to meet length criteria (minimum 8 characters).
+- Password is salted and hashed using `bcrypt.hash(password, 10)` with **10 salt rounds**.
+- The plain password is never saved or logged; only the irreversible hash is written to the `users` collection.
+- During login (`loginUserController`), passwords are verified using constant-time comparison via `bcrypt.compare(password, user.password)`.
 
-### 3. Dual-Identifier Lookup (ObjectId & Short Code)
+### 2. JWT Token Strategy
 
-- Endpoints supporting lookup and deletion (`GET /api/url/:id` and `DELETE /api/url/:id`) accept **either**:
-    - A 24-character hexadecimal MongoDB `ObjectId`.
-    - The 6-character alphanumeric `shortUrl` slug.
-- Protects against Mongoose `CastError` exceptions by evaluating `mongoose.Types.ObjectId.isValid(id)` prior to querying.
+When a user logs in successfully:
 
-### 4. Multi-Layer Rate Limiting
+- A JSON Web Token is signed using `jsonwebtoken`:
+    ```javascript
+    const token = jwt.sign({ id: user._id }, envConfig.JWT_SECRET, { expiresIn: '7d' });
+    ```
+- The token is placed into an HTTP cookie named `token`:
+    ```javascript
+    res.cookie('token', token);
+    ```
+- The client receives the cookie automatically and includes it with subsequent requests because the Axios instances use `withCredentials: true`.
 
-Configured using IETF Draft-7 headers to prevent denial-of-service and brute-force abuse:
+### 3. Blacklist Token Revocation (Stateful Logout)
 
-- **Global Limiter**: 200 requests per 15-minute window per IP across all routes.
-- **Creation Limiter**: 10 requests per 1-minute window per IP on `POST /api/url`.
-- **Redirect Limiter**: 60 requests per 1-minute window per IP on `GET /api/url/redirect/:shortCode`.
+Traditional stateless JWTs remain valid until their expiration timestamp even if a user explicitly logs out. Shortly prevents this vulnerability:
 
-### 5. Strict Request Validation & Sanitization
+1. When a user calls `POST /api/auth/logout`, the server extracts the cookie.
+2. The server creates a record in the `blacklistTokens` collection containing the token:
+    ```javascript
+    await blacklistTokenModel.create({ token });
+    ```
+3. The server clears the cookie via `res.clearCookie('token')`.
+4. Any future request attempting to present this token will be rejected immediately by the authentication middleware.
 
-Implemented via `express-validator` middleware chains:
+### 4. Authentication Middleware (`authUser`)
 
-- **URL Validation**: Requires strict `http://` or `https://` protocol prefix, valid URL URI syntax, and max 2048-character length.
-- **Alias Validation**: Supports custom slugs (4–20 alphanumeric characters and hyphens `^[a-zA-Z0-9-]+$`).
-- **Expiration Bounds**: Validates optional link expiration (1 to 8,760 hours / 1 year) with integer casting.
-- **Standardized Error Envelope**: Returns `422 Unprocessable Entity` containing an array of field-specific validation messages.
-
-### 6. Health Check & Route Discovery
-
-- Root route `GET /` returns an instant service health ping (`200 OK`) and status confirmation.
-
----
-
-## Database Schema (`urls`)
-
-The Mongoose model defined in `src/models/url.model.js` persists shortened link documents:
+Located in `src/middleware/auth.middleware.js`:
 
 ```javascript
-{
-  originalUrl: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  shortUrl: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    index: true
-  },
-  clicks: {
-    type: Number,
-    default: 0
-  },
-  createdAt: ISODate, // Automatic via timestamps: true
-  updatedAt: ISODate  // Automatic via timestamps: true
-}
-```
+export async function authUser(req, res, next) {
+    const token = req.cookies?.token;
 
----
+    if (!token) {
+        return res.status(401).json({ message: 'token not provided' });
+    }
 
-## Environment Configuration
+    try {
+        const isTokenBlacklisted = await blacklistTokenModel.findOne({ token });
+        if (isTokenBlacklisted) {
+            return res.status(401).json({ message: 'token is invalid' });
+        }
 
-Configuration is managed centrally in `src/config/env.config.js`. Create a `.env` file in the `server/` root:
-
-| Variable       | Type   | Required | Default                 | Description                                                                                     |
-| :------------- | :----- | :------: | :---------------------- | :---------------------------------------------------------------------------------------------- |
-| `DATABASE_URL` | String | **Yes**  | —                       | MongoDB connection string (Atlas or local `mongodb://...`). Throws error on startup if missing. |
-| `SERVER_PORT`  | Number |    No    | `3000`                  | HTTP port on which the Express server listens.                                                  |
-| `SERVER_URL`   | String |    No    | `http://localhost:3000` | Fully qualified base domain used to construct `fullShortUrl` links in responses.                |
-| `NODE_ENV`     | String |    No    | `development`           | Environment mode (`development` or `production`).                                               |
-
----
-
-## API Reference
-
-Base URL: `http://localhost:3000`
-
-### 1. Service Health
-
-```http
-GET /
-```
-
-#### Response `200 OK`
-
-```json
-{
-    "message": "URL Shortener API is running"
-}
-```
-
----
-
-### 2. Create Shortened URL
-
-```http
-POST /api/url
-Content-Type: application/json
-Rate Limit: 10 requests / 1 minute
-```
-
-#### Request Body
-
-```json
-{
-    "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript"
-}
-```
-
-#### Response `201 Created`
-
-```json
-{
-    "message": "shorten url created successfully",
-    "data": {
-        "id": "6724a1f3c5d8a9e71b2f4a12",
-        "originalUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
-        "shortUrl": "k9xL2p",
-        "fullShortUrl": "http://localhost:3000/k9xL2p",
-        "clicks": 0,
-        "createdAt": "2026-10-02T10:00:00.000Z"
+        const decoded = jwt.verify(token, envConfig.JWT_SECRET);
+        req.user = decoded; // { id: '...', iat: ..., exp: ... }
+        next();
+    } catch (err) {
+        return res.status(401).json({ message: 'Invalid token' });
     }
 }
 ```
 
-#### Validation Error Response `422 Unprocessable Entity`
+---
+
+## URL Engine & Redirection Mechanism
+
+### 1. Base62 Slug Generation & Collision Resistance
+
+Short codes are produced by `src/utils/generateCode.js`:
+
+- Uses the standard Base62 character alphabet:
+    ```
+    0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+    ```
+- Randomly generates a 6-character string.
+- Permutation space: $62^6 = 56,800,235,584$ (over **56.8 billion** unique combinations).
+
+#### Active Collision Protection Loop
+
+In `createShortenUrl`:
+
+```javascript
+let shortCode = generateCode();
+let attempts = 0;
+while (await urlModel.findOne({ shortUrl: shortCode })) {
+    shortCode = generateCode();
+    attempts++;
+    if (attempts > 5) {
+        return res.status(500).json({
+            error: 'Failed to generate unique short code, please try again',
+        });
+    }
+}
+```
+
+If an existing document has the same slug, the engine re-rolls up to 5 times before failing safely.
+
+### 2. Atomic Visit Tracking (`$inc`)
+
+In high-concurrency environments, reading a document, incrementing the counter in JavaScript, and saving it back causes lost updates (race condition). Shortly prevents this by using MongoDB's atomic `$inc` update operator:
+
+```javascript
+const urlDoc = await urlModel.findOneAndUpdate(
+    { shortUrl: shortCode },
+    { $inc: { clicks: 1 } },
+    { new: true },
+);
+```
+
+This single query updates the document atomically within the MongoDB engine and returns the updated document in one round-trip.
+
+### 3. Dual Redirection Endpoints
+
+1. **Root Redirection (`GET /:shortCode`)**:
+    - Mounted in `src/app.js`: `app.get('/:shortCode', redirectUrl)`.
+    - Public route for direct end-user navigation (no auth required).
+    - Generates clean links like `http://localhost:3000/k9xL2p`.
+2. **API Redirection (`GET /api/url/redirect/:shortCode`)**:
+    - Mounted in `src/modules/url/routes/url.routes.js`.
+    - Protected by `authUser` and restricted by `redirectLimiter` (60 req/min).
+
+### 4. Browser Prefetch Filtering (`favicon.ico`)
+
+Modern browsers automatically request `GET /favicon.ico` when a user loads a URL. Without special handling, the server would interpret `favicon.ico` as a short code, query MongoDB, fail, or miscalculate click metrics:
+
+```javascript
+if (shortCode === 'favicon.ico') {
+    return res.status(204).end();
+}
+```
+
+The server immediately responds with `204 No Content` without performing a database lookup.
+
+### 5. Dual-Identifier Lookup Strategy
+
+Endpoints like `GET /api/url/:id` and `DELETE /api/url/:id` allow users or frontends to pass either a 24-character hexadecimal MongoDB `ObjectId` or the 6-character `shortUrl` string:
+
+```javascript
+let url = null;
+if (mongoose.Types.ObjectId.isValid(id)) {
+    url = await urlModel.findById(id);
+}
+if (!url) {
+    url = await urlModel.findOne({ shortUrl: id });
+}
+```
+
+Evaluating `mongoose.Types.ObjectId.isValid(id)` first prevents Mongoose `CastError` exceptions when checking 6-character alphanumeric slugs.
+
+### 6. ReDoS-Safe URL Search
+
+In `getAllUrls`, search queries from the client (`?search=query`) filter both the original URL and the short code:
+
+```javascript
+if (queryTerm) {
+    const escaped = queryTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(escaped, 'i');
+    filter = {
+        $or: [{ shortUrl: searchRegex }, { originalUrl: searchRegex }],
+    };
+}
+```
+
+All special RegExp metacharacters are escaped prior to regex instantiation, preventing Regular Expression Denial of Service (ReDoS) vulnerabilities.
+
+---
+
+## Validation & Traffic Control
+
+### 1. express-validator Middleware
+
+Validation rules are consolidated in `src/middleware/validate.middleware.js`:
+
+| Validator Chain          | Target Fields                           | Rules Enforced                                          |
+| :----------------------- | :-------------------------------------- | :------------------------------------------------------ |
+| `validateRegister`       | `username`, `email`, `password`         | Non-empty, valid email syntax, password minimum 8 chars |
+| `validateLogin`          | `email`, `password`                     | Non-empty, valid email syntax, password minimum 8 chars |
+| `validateCreateUrl`      | `url`, `alias` (opt), `expiresIn` (opt) | Valid `http://` or `https://` protocol, max 2048 chars  |
+| `validateIdParam`        | `id`                                    | Non-empty string, max 100 chars                         |
+| `validateShortCodeParam` | `shortCode`                             | Alphanumeric + hyphens, 4–20 characters                 |
+
+### 2. Standardized 422 Error Envelope
+
+When validation fails, `handleValidationErrors` halts request execution and returns an error response in this consistent format:
 
 ```json
 {
@@ -260,147 +362,433 @@ Rate Limit: 10 requests / 1 minute
 }
 ```
 
+### 3. Tiered Rate Limiting
+
+Implemented via `express-rate-limit` using standard RFC Draft-7 headers (`RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`):
+
+1. **Global Limiter (`globalLimiter`)**:
+    - `windowMs`: 15 minutes (900,000 ms)
+    - `max`: 200 requests per IP
+    - Applied globally in `app.js`.
+2. **Creation Limiter (`createUrlLimiter`)**:
+    - `windowMs`: 1 minute (60,000 ms)
+    - `max`: 10 requests per IP
+    - Applied on `POST /api/url` to curb bulk link generation spam.
+3. **Redirection Limiter (`redirectLimiter`)**:
+    - `windowMs`: 1 minute (60,000 ms)
+    - `max`: 60 requests per IP
+    - Applied on `GET /api/url/redirect/:shortCode`.
+
 ---
 
-### 3. Redirect to Original Destination
+## Database Models & Indexing
 
-```http
-GET /:shortCode
-GET /api/url/redirect/:shortCode
-Rate Limit: 60 requests / 1 minute
+### 1. `users` Model
+
+Stored in the `users` collection (`src/models/user.model.js`):
+
+```javascript
+const userSchema = new mongoose.Schema({
+    username: {
+        type: String,
+        required: [true, 'username is required'],
+    },
+    email: {
+        type: String,
+        required: [true, 'email is required'],
+    },
+    password: {
+        type: String,
+        required: [true, 'password is required'],
+    },
+});
 ```
 
-#### Behavior
+### 2. `urls` Model
 
-- Atomically increments `clicks` count by `1`.
-- Responds with an **HTTP 302 Found** redirect pointing to `originalUrl`.
-- Returns **404 Not Found** if the short code is nonexistent.
-- Suppresses `favicon.ico` queries with **204 No Content**.
+Stored in the `urls` collection (`src/models/url.model.js`):
+
+```javascript
+const urlSchema = new mongoose.Schema(
+    {
+        originalUrl: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        shortUrl: {
+            type: String,
+            required: true,
+            unique: true, // Generates unique B-tree index
+            trim: true,
+            index: true, // Ensures sub-millisecond lookup during redirection
+        },
+        clicks: {
+            type: Number,
+            default: 0,
+        },
+    },
+    {
+        timestamps: true, // Automatically creates createdAt and updatedAt
+    },
+);
+```
+
+### 3. `blacklistTokens` Model
+
+Stored in the `blacklistTokens` collection (`src/models/blacklist.model.js`):
+
+```javascript
+const blacklistTokenSchema = new mongoose.Schema(
+    {
+        token: {
+            type: String,
+            required: [true, 'token is required'],
+        },
+    },
+    {
+        timestamps: true,
+    },
+);
+```
 
 ---
 
-### 4. Get All Shortened URLs
+## Configuration & Bootstrapping
 
-```http
-GET /api/url
+### Strict Environment Assertions
+
+Configuration is centralized in `src/config/env.config.js`. It runs runtime assertions to prevent the server from running in a partially configured state:
+
+```javascript
+if (!process.env.DATABASE_URL) {
+    throw new Error('MISSING ENVIRONMENT VARIABLE: DATABASE_URL');
+}
+
+if (!process.env.JWT_SECRET) {
+    throw new Error('MISSING ENVIRONMENT VARIABLE: JWT_SECRET');
+}
 ```
 
-#### Response `200 OK`
+#### Exported Configuration Object
 
-```json
-{
-    "message": "URLs fetched successfully",
-    "data": {
-        "urls": [
-            {
-                "_id": "6724a1f3c5d8a9e71b2f4a12",
-                "originalUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
-                "shortUrl": "k9xL2p",
-                "clicks": 14,
-                "createdAt": "2026-10-02T10:00:00.000Z",
-                "updatedAt": "2026-10-02T10:45:00.000Z"
+```javascript
+const envConfig = {
+    SERVER_PORT: process.env.SERVER_PORT || 3000,
+    SERVER_URL: process.env.SERVER_URL || 'http://localhost:3000',
+    IS_PRODUCTION: process.env.NODE_ENV === 'production',
+    DATABASE_URL: process.env.DATABASE_URL,
+    JWT_SECRET: process.env.JWT_SECRET,
+};
+```
+
+### MongoDB Connection Resilience
+
+In `src/config/db.js`, connection lifecycle events are monitored:
+
+- `connected`: Logs successful database connection.
+- `error`: Logs runtime database connectivity errors.
+- `disconnected`: Warns if the database connection drops unexpectedly.
+
+`server.js` enforces the connection before accepting incoming traffic:
+
+```javascript
+connectDb().then(() => {
+    app.listen(envConfig.SERVER_PORT, () => {
+        console.log(`Server listening on port ${envConfig.SERVER_PORT}`);
+    });
+});
+```
+
+---
+
+## Single-Port Full-Stack Deployment
+
+The Shortly architecture supports serving both the React frontend and the Express backend from a single unified server instance.
+
+### The Client Build Pipeline (`scripts/build-client.js`)
+
+The `scripts/build-client.js` script handles building the client assets:
+
+1. Checks that the `client/` directory exists.
+2. Automatically executes `npm install --include=dev` in `client/` if `node_modules` is absent.
+3. Ensures `server/src/public/` exists.
+4. Executes `vite build --outDir <targetPublicDir> --emptyOutDir`.
+
+### SPA Fallback Routing in Express 5
+
+In `src/app.js`, Express serves static assets from `server/src/public`. For non-API routes requested in the browser (such as `/login`, `/register`, or `/`), Express serves `index.html` so React Router can handle routing on the client:
+
+```javascript
+app.use(express.static(publicPath));
+
+// API routes mounted here...
+
+// SPA Fallback
+app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api')) {
+        return next();
+    }
+    const indexPath = path.join(publicPath, 'index.html');
+    res.sendFile(indexPath, (err) => {
+        if (err) next();
+    });
+});
+```
+
+---
+
+## Complete API Reference
+
+Base URL: `http://localhost:3000`
+
+### 1. Authentication API (`/api/auth`)
+
+#### `POST /api/auth/register`
+
+Creates a new user profile.
+
+- **Headers**: `Content-Type: application/json`
+- **Request Body**:
+    ```json
+    {
+        "username": "aman",
+        "email": "aman@example.com",
+        "password": "SecretPassword123"
+    }
+    ```
+- **Responses**:
+    - `201 Created`:
+        ```json
+        {
+            "message": "user registration successfull",
+            "data": {
+                "username": "aman",
+                "email": "aman@example.com"
             }
-        ]
-    }
-}
-```
-
----
-
-### 5. Get URL Details by ID or Short Code
-
-```http
-GET /api/url/:id
-```
-
-_(Accepts either MongoDB `_id` or 6-character `shortUrl` slug)_
-
-#### Response `200 OK`
-
-```json
-{
-    "message": "url fetched successfully",
-    "data": {
-        "url": {
-            "_id": "6724a1f3c5d8a9e71b2f4a12",
-            "originalUrl": "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
-            "shortUrl": "k9xL2p",
-            "clicks": 14,
-            "createdAt": "2026-10-02T10:00:00.000Z",
-            "updatedAt": "2026-10-02T10:45:00.000Z"
         }
+        ```
+    - `400 Bad Request`: `{ "message": "username already exists" }` or `{ "message": "user already exists with this email" }`
+    - `422 Unprocessable Entity`: Validation failure (short password or invalid email syntax).
+
+#### `POST /api/auth/login`
+
+Authenticates a user and establishes an HTTP cookie session.
+
+- **Headers**: `Content-Type: application/json`
+- **Request Body**:
+    ```json
+    {
+        "email": "aman@example.com",
+        "password": "SecretPassword123"
     }
-}
-```
+    ```
+- **Responses**:
+    - `200 OK` (Sets cookie `token`):
+        ```json
+        {
+            "message": "Login successfull",
+            "data": {
+                "username": "aman",
+                "email": "aman@example.com"
+            },
+            "token": "eyJhbGciOiJIUzI1NiIsIn..."
+        }
+        ```
+    - `400 Bad Request`: `{ "message": "No user exists with this email" }` or `{ "message": "Entered password is incorrect" }`
 
-#### Response `404 Not Found`
+#### `GET /api/auth/me`
 
-```json
-{
-    "error": "No url exists with this Id or short code"
-}
-```
+Fetches the active user profile from the provided cookie session.
+
+- **Cookies**: `token=<jwt>`
+- **Responses**:
+    - `200 OK`:
+        ```json
+        {
+            "message": "user fetched successfully",
+            "data": {
+                "username": "aman",
+                "email": "aman@example.com"
+            },
+            "token": "eyJhbGciOiJIUzI1NiIsIn..."
+        }
+        ```
+    - `401 Unauthorized`: `{ "message": "token not provided" }` or `{ "message": "invalid or expired token" }`
+
+#### `POST /api/auth/logout`
+
+Revokes the current session token and clears the cookie.
+
+- **Cookies**: `token=<jwt>`
+- **Responses**:
+    - `200 OK`:
+        ```json
+        {
+            "message": "logged out successfully"
+        }
+        ```
+    - `400 Bad Request`: `{ "message": "token is required for logging out" }`
 
 ---
 
-### 6. Delete URL by ID or Short Code
+### 2. URL Management API (`/api/url`)
+
+> [!NOTE]
+> All endpoints under `/api/url` require an authenticated session cookie via `authUser` middleware.
+
+#### `POST /api/url`
+
+Creates a shortened URL.
+
+- **Rate Limit**: 10 requests / 1 minute per IP.
+- **Request Body**:
+    ```json
+    {
+        "url": "https://nodejs.org/docs/latest-v20.x/api/"
+    }
+    ```
+- **Responses**:
+    - `201 Created`:
+        ```json
+        {
+            "message": "shorten url created successfully",
+            "data": {
+                "id": "6724a1f3c5d8a9e71b2f4a12",
+                "originalUrl": "https://nodejs.org/docs/latest-v20.x/api/",
+                "shortUrl": "aB3dE1",
+                "fullShortUrl": "http://localhost:3000/aB3dE1",
+                "clicks": 0,
+                "createdAt": "2026-10-15T06:30:00.000Z"
+            }
+        }
+        ```
+    - `422 Unprocessable Entity`: Invalid URL format or protocol missing.
+
+#### `GET /api/url`
+
+Retrieves all shortened links, with optional search query filtering.
+
+- **Query Parameters**:
+    - `search` or `q` (optional): Filter string matching `originalUrl` or `shortUrl`.
+- **Responses**:
+    - `200 OK`:
+        ```json
+        {
+            "message": "URLs fetched successfully",
+            "data": {
+                "urls": [
+                    {
+                        "_id": "6724a1f3c5d8a9e71b2f4a12",
+                        "originalUrl": "https://nodejs.org/docs/latest-v20.x/api/",
+                        "shortUrl": "aB3dE1",
+                        "clicks": 7,
+                        "createdAt": "2026-10-15T06:30:00.000Z",
+                        "updatedAt": "2026-10-15T07:15:00.000Z"
+                    }
+                ]
+            }
+        }
+        ```
+
+#### `GET /api/url/:id`
+
+Retrieves link details by either MongoDB `_id` or 6-character `shortUrl`.
+
+- **Parameters**: `:id` (e.g. `6724a1f3c5d8a9e71b2f4a12` or `aB3dE1`)
+- **Responses**:
+    - `200 OK`:
+        ```json
+        {
+            "message": "url fetched successfully",
+            "data": {
+                "url": {
+                    "_id": "6724a1f3c5d8a9e71b2f4a12",
+                    "originalUrl": "https://nodejs.org/docs/latest-v20.x/api/",
+                    "shortUrl": "aB3dE1",
+                    "clicks": 7,
+                    "createdAt": "2026-10-15T06:30:00.000Z",
+                    "updatedAt": "2026-10-15T07:15:00.000Z"
+                }
+            }
+        }
+        ```
+    - `404 Not Found`: `{ "error": "No url exists with this Id or short code" }`
+
+#### `DELETE /api/url/:id`
+
+Deletes a link by either MongoDB `_id` or 6-character `shortUrl`.
+
+- **Parameters**: `:id`
+- **Responses**:
+    - `200 OK`: `{ "message": "Url deleted successfully" }`
+    - `404 Not Found`: `{ "error": "No url exists with this id and shorturl" }`
+
+#### `GET /api/url/redirect/:shortCode`
+
+API-namespaced redirection.
+
+- **Rate Limit**: 60 requests / 1 minute per IP.
+- **Responses**:
+    - `302 Found`: Redirects browser to destination `originalUrl`.
+    - `404 Not Found`: `{ "error": "Short URL not found" }`
+
+---
+
+### 3. Public Redirection (`/:shortCode`)
 
 ```http
-DELETE /api/url/:id
+GET http://localhost:3000/:shortCode
 ```
 
-_(Accepts either MongoDB `_id` or 6-character `shortUrl` slug)_
-
-#### Response `200 OK`
-
-```json
-{
-    "message": "Url deleted successfully"
-}
-```
-
-#### Response `404 Not Found`
-
-```json
-{
-    "error": "No url exists with this id"
-}
-```
+- **Authentication**: None (Public).
+- **Behavior**:
+    - Atomically increments click counter via `$inc`.
+    - Responds with `302 Found` to `originalUrl`.
+    - Returns `204 No Content` for `favicon.ico`.
+    - Returns `404 Not Found` if short code doesn't exist.
 
 ---
 
-## HTTP Status Codes
+## HTTP Status Code Matrix
 
-| Status Code                 | Description                 | Usage                                                              |
-| :-------------------------- | :-------------------------- | :----------------------------------------------------------------- |
-| `200 OK`                    | Request succeeded           | `GET /`, `GET /api/url`, `GET /api/url/:id`, `DELETE /api/url/:id` |
-| `201 Created`               | Resource created            | `POST /api/url`                                                    |
-| `204 No Content`            | No response body            | Intercepted browser `GET /favicon.ico`                             |
-| `302 Found`                 | URL redirection             | Successful short code redirection                                  |
-| `400 Bad Request`           | Client request syntax error | Missing payload or parameter                                       |
-| `404 Not Found`             | Resource does not exist     | Short code or URL ID not found in database                         |
-| `422 Unprocessable Entity`  | Validation error            | Input violates validation schema (`express-validator`)             |
-| `429 Too Many Requests`     | Rate limit exceeded         | IP exceeded permitted requests per window                          |
-| `500 Internal Server Error` | Unhandled server exception  | Database or internal runtime error                                 |
+| Status Code                | Meaning                        | Context / Route                                                                                        |
+| :------------------------- | :----------------------------- | :----------------------------------------------------------------------------------------------------- |
+| `200 OK`                   | Success with payload           | `GET /api/url`, `GET /api/url/:id`, `GET /api/auth/me`, `DELETE /api/url/:id`, `POST /api/auth/logout` |
+| `201 Created`              | Resource persisted             | `POST /api/url`, `POST /api/auth/register`                                                             |
+| `204 No Content`           | Handled with no content        | Suppressed browser `GET /favicon.ico`                                                                  |
+| `302 Found`                | HTTP Redirection               | Successful link navigation via `/:shortCode`                                                           |
+| `400 Bad Request`          | Missing input / logic mismatch | Duplicate username/email, missing parameters                                                           |
+| `401 Unauthorized`         | Missing / invalid token        | Protected routes when unauthenticated or token revoked                                                 |
+| `404 Not Found`            | Document not found             | Non-existent short codes or URL IDs                                                                    |
+| `422 Unprocessable Entity` | Validation failure             | Schema rule violations (`express-validator`)                                                           |
+| `429 Too Many Requests`    | Rate limit breached            | Exceeding 10 creates/min, 60 redirects/min, or 200 req/15min                                           |
+| `500 Internal Error`       | Server exception               | Uncaught exception or database connection failure                                                      |
 
 ---
 
-## Local Development & Scripts
+## Development & Operations
 
-### Installation
+### Install Dependencies
 
 ```bash
 cd server
 npm install
 ```
 
-### Run in Development (Live Reload via Nodemon)
+### Start Development Server (Nodemon)
 
 ```bash
 npm run dev
 ```
 
-### Run in Production
+### Build Client Bundle for Single-Port Production
+
+```bash
+npm run build
+```
+
+### Run Server in Production
 
 ```bash
 npm start
