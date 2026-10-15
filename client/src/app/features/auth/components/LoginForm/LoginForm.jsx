@@ -53,7 +53,7 @@ export const LoginForm = ({ onSuccess }) => {
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        placeholder="you@example.com"
+                        placeholder="Enter your email address"
                         autoComplete="email"
                         required
                         disabled={submitting}
@@ -71,7 +71,7 @@ export const LoginForm = ({ onSuccess }) => {
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
-                        placeholder="••••••••"
+                        placeholder="Enter your password"
                         autoComplete="current-password"
                         required
                         disabled={submitting}
