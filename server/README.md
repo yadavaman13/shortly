@@ -1,4 +1,4 @@
-# Shortly Server — In-Depth Architecture & Implementation
+# Shortly Server — Architecture & Implementation
 
 A production-grade, modular backend service and high-throughput redirection engine powering the **Shortly** URL shortening platform. Built with **Node.js (ES Modules)**, **Express 5**, and **MongoDB (Mongoose 9)**.
 
