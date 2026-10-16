@@ -3,11 +3,13 @@ import {
     respondShortenedUrl,
     getAllUrls,
     getUrlById,
+    updateUrl,
     deleteUrl,
     redirectUrl,
 } from '../controllers/url.controller.js';
 import {
     validateCreateUrl,
+    validateUpdateUrl,
     validateIdParam,
     validateShortCodeParam,
 } from '../../../middleware/validate.middleware.js';
@@ -47,6 +49,13 @@ urlRouter.get('/redirect/:shortCode', authUser, redirectLimiter, validateShortCo
  * @access  Public
  */
 urlRouter.get('/:id', authUser, validateIdParam, getUrlById);
+
+/**
+ * @route   PATCH /api/url/:id
+ * @desc    Update destination originalUrl (Resilient QR)
+ * @access  Protected
+ */
+urlRouter.patch('/:id', authUser, validateUpdateUrl, updateUrl);
 
 /**
  * @route   DELETE /api/url/:id

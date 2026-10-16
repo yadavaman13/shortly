@@ -46,9 +46,15 @@ export async function redirectUrl(req, res) {
             return res.status(204).end();
         }
 
+        const isQrScan = req.query.ref === 'qr';
+        const updateOps = { $inc: { clicks: 1 } };
+        if (isQrScan) {
+            updateOps.$inc.qrScans = 1;
+        }
+
         const urlDoc = await urlModel.findOneAndUpdate(
             { shortUrl: shortCode },
-            { $inc: { clicks: 1 } },
+            updateOps,
             { new: true },
         );
 
@@ -172,6 +178,69 @@ export async function deleteUrl(req, res) {
         });
     } catch (err) {
         console.error('Error deleting URL:', err);
+        return res.status(500).json({
+            error: 'Internal server error',
+        });
+    }
+}
+
+// Update destination URL (Resilient QR)
+export async function updateUrl(req, res) {
+    try {
+        const { id } = req.params;
+        const { url: newUrl } = req.body;
+
+        if (!id) {
+            return res.status(400).json({
+                error: 'Enter url Id or short code',
+            });
+        }
+
+        let urlDoc = null;
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            urlDoc = await urlModel.findById(id);
+        }
+
+        if (!urlDoc) {
+            urlDoc = await urlModel.findOne({ shortUrl: id });
+        }
+
+        if (!urlDoc) {
+            return res.status(404).json({
+                error: 'No url exists with this Id or short code',
+            });
+        }
+
+        const trimmedUrl = newUrl.trim();
+
+        // If changed, push previous url into editHistory
+        if (urlDoc.originalUrl !== trimmedUrl) {
+            urlDoc.editHistory.push({
+                previousUrl: urlDoc.originalUrl,
+                changedAt: new Date(),
+            });
+            urlDoc.originalUrl = trimmedUrl;
+            await urlDoc.save();
+        }
+
+        const serverUrl = envConfig.SERVER_URL.replace(/\/$/, '');
+        const fullShortUrl = `${serverUrl}/${urlDoc.shortUrl}`;
+
+        return res.status(200).json({
+            message: 'Destination URL updated successfully',
+            data: {
+                id: urlDoc._id,
+                originalUrl: urlDoc.originalUrl,
+                shortUrl: urlDoc.shortUrl,
+                fullShortUrl,
+                clicks: urlDoc.clicks,
+                qrScans: urlDoc.qrScans || 0,
+                editHistory: urlDoc.editHistory,
+                updatedAt: urlDoc.updatedAt,
+            },
+        });
+    } catch (err) {
+        console.error('Error updating URL destination:', err);
         return res.status(500).json({
             error: 'Internal server error',
         });

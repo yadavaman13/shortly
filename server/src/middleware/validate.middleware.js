@@ -132,3 +132,24 @@ export const validateLogin = [
 
     handleValidationErrors,
 ];
+
+/**
+ * Validation rules for PATCH /api/url/:id (update destination URL).
+ */
+export const validateUpdateUrl = [
+    param('id')
+        .notEmpty()
+        .withMessage('id parameter is required')
+        .isLength({ min: 1, max: 100 })
+        .withMessage('id parameter is too long'),
+
+    body('url')
+        .notEmpty()
+        .withMessage('url is required')
+        .isURL({ protocols: ['http', 'https'], require_protocol: true })
+        .withMessage('url must start with http:// or https:// and be a valid URL')
+        .isLength({ max: 2048 })
+        .withMessage('url must not exceed 2048 characters'),
+
+    handleValidationErrors,
+];
