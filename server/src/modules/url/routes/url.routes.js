@@ -1,6 +1,6 @@
 import express from 'express';
 import {
-    createShortenUrl,
+    respondShortenedUrl,
     getAllUrls,
     getUrlById,
     deleteUrl,
@@ -13,16 +13,18 @@ import {
 } from '../../../middleware/validate.middleware.js';
 import { createUrlLimiter, redirectLimiter } from '../../../middleware/rateLimit.middleware.js';
 import { authUser } from '../../../middleware/auth.middleware.js';
+import { shortenUrl } from '../../../middleware/shortenUrl.middleware.js';
 
 const urlRouter = express.Router();
 
 /**
  * @route   POST /api/url
  * @desc    Create a shortened URL
- * @access  Public
+ * @access  Protected
  * @rateLimit 10 requests/minute per IP
+ * @pipeline validate → shortenUrl middleware → respond
  */
-urlRouter.post('/', authUser, createUrlLimiter, validateCreateUrl, createShortenUrl);
+urlRouter.post('/', authUser, createUrlLimiter, validateCreateUrl, shortenUrl(), respondShortenedUrl);
 
 /**
  * @route   GET /api/url

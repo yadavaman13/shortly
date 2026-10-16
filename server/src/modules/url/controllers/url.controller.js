@@ -1,46 +1,14 @@
 import mongoose from 'mongoose';
 import urlModel from '../../../models/url.model.js';
-import generateCode from '../../../utils/generateCode.js';
 import envConfig from '../../../config/env.config.js';
 
-export async function createShortenUrl(req, res) {
+/**
+ * Responds with the shortened URL data created by the shortenUrl middleware.
+ * Reads the URL document from `req.shortenedUrl` (set by shortenUrl middleware).
+ */
+export async function respondShortenedUrl(req, res) {
     try {
-        const { url } = req.body;
-
-        if (!url) {
-            return res.status(400).json({
-                error: 'Please enter an URL',
-            });
-        }
-
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            return res.status(400).json({
-                error: 'Please enter a valid URL',
-            });
-        }
-
-        if (url.length > 2048) {
-            return res.status(400).json({
-                error: 'url is too long',
-            });
-        }
-
-        let shortCode = generateCode();
-        let attempts = 0;
-        while (await urlModel.findOne({ shortUrl: shortCode })) {
-            shortCode = generateCode();
-            attempts++;
-            if (attempts > 5) {
-                return res.status(500).json({
-                    error: 'Failed to generate unique short code, please try again',
-                });
-            }
-        }
-
-        const newUrl = await urlModel.create({
-            originalUrl: url.trim(),
-            shortUrl: shortCode,
-        });
+        const newUrl = req.shortenedUrl;
 
         const serverUrl = envConfig.SERVER_URL.replace(/\/$/, '');
         const fullShortUrl = `${serverUrl}/${newUrl.shortUrl}`;
