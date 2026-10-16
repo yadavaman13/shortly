@@ -18,6 +18,20 @@ const urlSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        qrGenerated: {
+            type: Boolean,
+            default: false,
+        },
+        qrScans: {
+            type: Number,
+            default: 0,
+        },
+        editHistory: [
+            {
+                previousUrl: { type: String, required: true },
+                changedAt: { type: Date, default: Date.now },
+            },
+        ],
     },
     {
         timestamps: true,
