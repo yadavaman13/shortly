@@ -3,6 +3,7 @@ import {
     getAllUrls,
     createShortenUrl as apiCreateShortenUrl,
     deleteUrl as apiDeleteUrl,
+    updateUrl as apiUpdateUrl,
 } from '../services/url.api.js';
 
 const UrlContext = createContext(null);
@@ -128,6 +129,39 @@ export const UrlProvider = ({ children }) => {
         [currentUrl, showToast],
     );
 
+    // Update URL Destination (Resilient QR)
+    const updateUrlDestination = useCallback(
+        async (id, newUrl) => {
+            try {
+                setError(null);
+                const result = await apiUpdateUrl(id, { url: newUrl });
+                const updatedData = result?.data || result;
+
+                setUrls((prev) =>
+                    prev.map((u) => {
+                        const match = (u._id || u.id) === id || u.shortUrl === id;
+                        return match ? { ...u, ...updatedData } : u;
+                    }),
+                );
+
+                if (currentUrl && ((currentUrl._id || currentUrl.id) === id || currentUrl.shortUrl === id)) {
+                    setCurrentUrl((prev) => ({ ...prev, ...updatedData }));
+                }
+
+                showToast('Destination updated — QR code unchanged!', 'success');
+                return updatedData;
+            } catch (err) {
+                console.error('Failed to update URL destination:', err);
+                const details = err.details?.map((d) => d.message).join(', ');
+                const msg = details || err.error || err.message || 'Failed to update destination';
+                setError(msg);
+                showToast(msg, 'error');
+                throw err;
+            }
+        },
+        [currentUrl, showToast],
+    );
+
     const clearError = useCallback(() => setError(null), []);
     const clearCurrentUrl = useCallback(() => setCurrentUrl(null), []);
 
@@ -148,6 +182,7 @@ export const UrlProvider = ({ children }) => {
         fetchUrls,
         shortenUrl,
         removeUrl,
+        updateUrlDestination,
     };
 
     return <UrlContext.Provider value={value}>{children}</UrlContext.Provider>;

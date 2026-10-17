@@ -101,3 +101,21 @@ export async function redirectUrl(shortCode) {
         throw err.response?.data || { error: err.message || 'Network error' };
     }
 }
+
+/**
+ * Updates destination originalUrl (Resilient QR)
+ * @param {string} id - Mongo ObjectId or short code
+ * @param {string|{url: string}} payload
+ * @returns {Promise<object>}
+ */
+export async function updateUrl(id, payload) {
+    try {
+        const body = typeof payload === 'string' ? { url: payload } : payload;
+        const response = await urlApiInstance.patch(`/${id}`, body);
+        return response.data;
+    } catch (err) {
+        console.error('Error occurred while updating URL:', err);
+        throw err.response?.data || { error: err.message || 'Network error' };
+    }
+}
+
