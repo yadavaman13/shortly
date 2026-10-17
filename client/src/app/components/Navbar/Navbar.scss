@@ -43,6 +43,42 @@
             color: var(--text-primary);
         }
 
+        .navbar-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-left: 0.75rem;
+
+            .nav-tab {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.35rem 0.65rem;
+                font-size: 0.8rem;
+                font-weight: 500;
+                border-radius: $border-radius-sm;
+                color: var(--text-muted);
+                text-decoration: none;
+                transition: all var(--transition-fast);
+
+                &:hover {
+                    color: var(--text-primary);
+                    background: var(--bg-secondary);
+                }
+
+                &.active {
+                    color: var(--text-primary);
+                    background: var(--bg-tertiary);
+                    border: 1px solid var(--border-subtle);
+                    font-weight: 600;
+                }
+            }
+
+            @include mobile {
+                display: none;
+            }
+        }
+
         .status-indicator {
             display: inline-flex;
             align-items: center;

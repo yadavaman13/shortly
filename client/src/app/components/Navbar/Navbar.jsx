@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Moon, Sun, LogOut, User } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Moon, Sun, LogOut, User, QrCode, Link2 } from 'lucide-react';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth/hooks/useAuth.js';
 import './Navbar.scss';
 
@@ -52,6 +52,26 @@ export const Navbar = () => {
                     <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
                         <span className="brand-text">Url Shortner</span>
                     </Link>
+
+                    {isAuthenticated && (
+                        <nav className="navbar-nav-links" aria-label="Feature navigation">
+                            <NavLink
+                                to="/"
+                                end
+                                className={({ isActive }) => `nav-tab ${isActive ? 'active' : ''}`}
+                            >
+                                <Link2 size={14} />
+                                <span>Shortener</span>
+                            </NavLink>
+                            <NavLink
+                                to="/qr"
+                                className={({ isActive }) => `nav-tab ${isActive ? 'active' : ''}`}
+                            >
+                                <QrCode size={14} />
+                                <span>QR Codes</span>
+                            </NavLink>
+                        </nav>
+                    )}
                 </div>
 
                 <div className="navbar-right">

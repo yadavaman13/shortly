@@ -1,6 +1,7 @@
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './app/features/auth/context/authContext.jsx';
 import { UrlProvider } from './app/features/url/context/urlContext.jsx';
+import { QrProvider } from './app/features/qr/context/qrContext.jsx';
 import { Navbar, Toast, Footer } from './app/components/index.js';
 import AppRoutes from './app.routes.jsx';
 import './App.scss';
@@ -22,7 +23,9 @@ export function App() {
         <BrowserRouter>
             <AuthProvider>
                 <UrlProvider>
-                    <AppLayout />
+                    <QrProvider>
+                        <AppLayout />
+                    </QrProvider>
                 </UrlProvider>
             </AuthProvider>
         </BrowserRouter>

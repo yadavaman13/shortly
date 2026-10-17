@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './app/features/auth/hooks/useAuth.js';
 import { LoginPage, RegisterPage } from './app/features/auth/pages/index.js';
 import { UrlStats, UrlForm, UrlResult, UrlList } from './app/features/url/components/index.js';
+import { QrPage } from './app/features/qr/pages/index.js';
 import { Loader2 } from 'lucide-react';
 
 /**
@@ -82,6 +83,14 @@ export default function AppRoutes() {
                 element={
                     <ProtectedRoute>
                         <DashboardView />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/qr"
+                element={
+                    <ProtectedRoute>
+                        <QrPage />
                     </ProtectedRoute>
                 }
             />
