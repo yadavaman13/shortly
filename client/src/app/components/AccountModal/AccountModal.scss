@@ -1,0 +1,224 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.account-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.account-modal-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-medium);
+    border-radius: $border-radius-lg;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    animation: scaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+
+    .modal-header {
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--border-subtle);
+
+        .header-title-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+
+            .badge-pill {
+                font-size: 0.7rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: var(--text-muted);
+                font-weight: 600;
+            }
+
+            h3 {
+                margin: 0;
+                font-size: 1.15rem;
+                font-weight: 700;
+                color: var(--text-primary);
+            }
+        }
+
+        .btn-close {
+            @include button-reset;
+            width: 32px;
+            height: 32px;
+            border-radius: $border-radius-sm;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+
+            &:hover {
+                background: var(--bg-secondary);
+                color: var(--text-primary);
+                border-color: var(--border-medium);
+            }
+        }
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+
+        .account-avatar-banner {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: $border-radius-md;
+
+            .avatar-circle {
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                background: var(--accent-black);
+                color: var(--accent-white);
+                font-weight: 700;
+                font-size: 1.25rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 2px solid var(--border-subtle);
+            }
+
+            .avatar-meta {
+                display: flex;
+                flex-direction: column;
+                gap: 0.2rem;
+
+                .account-username {
+                    font-size: 1.1rem;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                }
+
+                .account-status {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.35rem;
+                    font-size: 0.75rem;
+                    color: #22c55e;
+                    font-weight: 500;
+                }
+            }
+        }
+
+        .account-details-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+
+            .detail-item {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+                padding: 0.75rem 1rem;
+                background: var(--bg-tertiary);
+                border-radius: $border-radius-sm;
+                border: 1px solid var(--border-subtle);
+
+                .detail-label {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.4rem;
+                    font-size: 0.75rem;
+                    color: var(--text-muted);
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.04em;
+                }
+
+                .detail-value {
+                    font-size: 0.95rem;
+                    font-weight: 600;
+                    color: var(--text-primary);
+                    font-family: var(--font-mono);
+                }
+            }
+        }
+    }
+
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-subtle);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .btn-signout {
+            @include button-reset;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0.85rem;
+            border-radius: $border-radius-sm;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            background: transparent;
+            font-size: 0.825rem;
+            font-weight: 600;
+            transition: all var(--transition-fast);
+
+            &:hover {
+                background: #ef4444;
+                color: #ffffff;
+            }
+        }
+
+        .btn-done {
+            @include button-reset;
+            padding: 0.5rem 1.25rem;
+            border-radius: $border-radius-sm;
+            background: var(--accent-black);
+            color: var(--accent-white);
+            font-size: 0.825rem;
+            font-weight: 600;
+            transition: all var(--transition-fast);
+
+            &:hover {
+                opacity: 0.9;
+            }
+        }
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleUp {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}

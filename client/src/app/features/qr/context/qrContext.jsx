@@ -91,8 +91,10 @@ export const QrProvider = ({ children }) => {
                 return qrData;
             } catch (err) {
                 console.error('Failed to generate QR code:', err);
-                const details = err.details?.map((d) => d.message).join(', ');
-                const errorMsg = details || err.error || 'Failed to generate QR code';
+                let errorMsg = details || err.error || 'Failed to generate QR code';
+                if (err.status === 401 || err.statusCode === 401 || errorMsg === 'token not provided') {
+                    errorMsg = 'Please sign in or register to generate QR codes';
+                }
                 setError(errorMsg);
                 showToast(errorMsg, 'error');
                 throw err;

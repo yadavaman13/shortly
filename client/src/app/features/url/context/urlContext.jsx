@@ -87,8 +87,10 @@ export const UrlProvider = ({ children }) => {
                 return newRecord;
             } catch (err) {
                 console.error('Failed to create short URL:', err);
-                const details = err.details?.map((d) => d.message).join(', ');
-                const errorMsg = details || err.error || 'Failed to shorten URL';
+                let errorMsg = details || err.error || 'Failed to shorten URL';
+                if (err.status === 401 || err.statusCode === 401 || errorMsg === 'token not provided') {
+                    errorMsg = 'Please sign in or register to shorten links';
+                }
                 setError(errorMsg);
                 showToast(errorMsg, 'error');
                 throw err;

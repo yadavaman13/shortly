@@ -1,25 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Moon, Sun, LogOut, User, QrCode, Link2 } from 'lucide-react';
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Moon, Sun, LogOut, User, ChevronDown } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/hooks/useAuth.js';
+import { AccountModal } from '../AccountModal/AccountModal.jsx';
 import './Navbar.scss';
-
-const GithubIcon = ({ size = 15, ...props }) => (
-    <svg
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        aria-hidden="true"
-        {...props}
-    >
-        <path
-            fillRule="evenodd"
-            clipRule="evenodd"
-            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-        />
-    </svg>
-);
 
 export const Navbar = () => {
     const { user, isAuthenticated, logout } = useAuth();
@@ -29,93 +13,153 @@ export const Navbar = () => {
         return localStorage.getItem('shortly-theme') || 'dark';
     });
 
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+    const menuRef = useRef(null);
+
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('shortly-theme', theme);
     }, [theme]);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setIsMenuOpen(false);
+            }
+        };
+
+        if (isMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isMenuOpen]);
 
     const toggleTheme = () => {
         setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
     };
 
     const handleLogout = async () => {
+        setIsMenuOpen(false);
         await logout();
-        navigate('/login', { replace: true });
+        navigate('/', { replace: true });
     };
 
     const initial = user?.username ? user.username.charAt(0).toUpperCase() : 'U';
 
     return (
-        <header className="app-navbar">
-            <div className="navbar-inner">
-                <div className="brand-wrap">
-                    <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <span className="brand-text">Url Shortner</span>
-                    </Link>
+        <>
+            <header className="app-navbar">
+                <div className="navbar-inner">
+                    <div className="brand-wrap">
+                        <Link to="/" className="brand-link" title="Shortly - Home">
+                            <span className="brand-text">Shortly</span>
+                        </Link>
+                    </div>
 
-                    {isAuthenticated && (
-                        <nav className="navbar-nav-links" aria-label="Feature navigation">
-                            <NavLink
-                                to="/"
-                                end
-                                className={({ isActive }) => `nav-tab ${isActive ? 'active' : ''}`}
-                            >
-                                <Link2 size={14} />
-                                <span>Shortener</span>
-                            </NavLink>
-                            <NavLink
-                                to="/qr"
-                                className={({ isActive }) => `nav-tab ${isActive ? 'active' : ''}`}
-                            >
-                                <QrCode size={14} />
-                                <span>QR Codes</span>
-                            </NavLink>
-                        </nav>
-                    )}
-                </div>
-
-                <div className="navbar-right">
-                    {isAuthenticated && user && (
-                        <div className="user-badge" title={`Logged in as ${user.username}`}>
-                            <span className="user-avatar">{initial}</span>
-                            <span className="user-name">{user.username}</span>
-                        </div>
-                    )}
-
-                    <button
-                        type="button"
-                        className="nav-btn"
-                        onClick={toggleTheme}
-                        title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
-                        aria-label="Toggle theme"
-                    >
-                        {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-                        <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-                    </button>
-
-                    {isAuthenticated ? (
+                    <div className="navbar-right">
+                        {/* Theme Toggle Button */}
                         <button
                             type="button"
-                            className="nav-btn"
-                            onClick={handleLogout}
-                            title="Sign out of your account"
-                            aria-label="Logout"
+                            className="nav-btn theme-toggle-btn"
+                            onClick={toggleTheme}
+                            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+                            aria-label="Toggle theme"
                         >
-                            <LogOut size={15} />
-                            <span>Logout</span>
+                            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                            <span className="theme-text">light/Dark</span>
                         </button>
-                    ) : (
-                        <Link to="/login" className="nav-btn" title="Sign In">
-                            <User size={15} />
-                            <span>Sign In</span>
-                        </Link>
-                    )}
 
+                        {/* Guest state: Sign In & Register */}
+                        {!isAuthenticated ? (
+                            <div className="guest-nav-links">
+                                <Link to="/login" className="nav-btn nav-link-btn" title="Sign In">
+                                    <span>Sign in</span>
+                                </Link>
+                                <Link
+                                    to="/register"
+                                    className="nav-btn nav-link-btn primary"
+                                    title="Create an account"
+                                >
+                                    <span>Register</span>
+                                </Link>
+                            </div>
+                        ) : (
+                            /* Authenticated state: Avatar with Dropdown */
+                            <div className="user-menu-container" ref={menuRef}>
+                                <button
+                                    type="button"
+                                    className={`avatar-trigger-btn ${isMenuOpen ? 'active' : ''}`}
+                                    onClick={() => setIsMenuOpen((prev) => !prev)}
+                                    title={`Account menu (${user?.username || 'User'})`}
+                                    aria-haspopup="true"
+                                    aria-expanded={isMenuOpen}
+                                >
+                                    <div className="avatar-icon-box">
+                                        <User size={16} />
+                                    </div>
+                                    <ChevronDown
+                                        size={13}
+                                        className={`chevron-icon ${isMenuOpen ? 'open' : ''}`}
+                                    />
+                                </button>
+
+                                {isMenuOpen && (
+                                    <div className="user-dropdown-card" role="menu">
+                                        <div className="dropdown-user-info">
+                                            <div className="mini-avatar">{initial}</div>
+                                            <div className="mini-user-text">
+                                                <span className="name">{user?.username}</span>
+                                                <span className="email">
+                                                    {user?.email || 'Logged in'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="dropdown-divider" />
+
+                                        <button
+                                            type="button"
+                                            className="dropdown-item"
+                                            onClick={() => {
+                                                setIsMenuOpen(false);
+                                                setIsAccountModalOpen(true);
+                                            }}
+                                            role="menuitem"
+                                        >
+                                            <User size={15} />
+                                            <span>My account</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="dropdown-item logout"
+                                            onClick={handleLogout}
+                                            role="menuitem"
+                                        >
+                                            <LogOut size={15} />
+                                            <span>Log out</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
-        </header>
+            </header>
+
+            {/* Account Profile Modal */}
+            <AccountModal
+                isOpen={isAccountModalOpen}
+                onClose={() => setIsAccountModalOpen(false)}
+                user={user}
+                onLogout={handleLogout}
+            />
+        </>
     );
 };
 
 export default Navbar;
-
