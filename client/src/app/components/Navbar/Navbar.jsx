@@ -111,15 +111,6 @@ export const Navbar = () => {
                         </Link>
                     )}
 
-                    <a
-                        href="https://github.com/yadavaman13/shortly"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="nav-btn"
-                        title="GitHub Repository"
-                    >
-                        <GithubIcon size={15} />
-                    </a>
                 </div>
             </div>
         </header>
