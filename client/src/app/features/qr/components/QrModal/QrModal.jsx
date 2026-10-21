@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     X,
     Download,
@@ -19,6 +20,25 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
     const [qrDataUrl, setQrDataUrl] = useState('');
     const [copied, setCopied] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && !showEditModal) {
+                onClose();
+            }
+        };
+
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, showEditModal, onClose]);
 
     const fullShortUrl = urlItem
         ? `${window.location.protocol}//${window.location.host}/${urlItem.shortUrl}`
@@ -67,15 +87,12 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
 
     const totalClicks = urlItem.clicks ?? 0;
 
-    return (
+    return createPortal(
         <>
-            <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+            <div className="modal-backdrop qr-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
                 <div className="modal-card qr-modal" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
                         <div className="header-title-wrap">
-                            <div className="qr-badge-icon">
-                                <QrIcon size={20} />
-                            </div>
                             <div>
                                 <h3>QR Code</h3>
                                 <p className="subtitle">/{urlItem.shortUrl}</p>
@@ -167,7 +184,7 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
                                 onClick={handleDownloadPng}
                             >
                                 <Download size={15} />
-                                <span>Download PNG</span>
+                                <span>Download QR</span>
                             </button>
                         </div>
                     </div>
@@ -180,7 +197,8 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
                 onClose={() => setShowEditModal(false)}
                 urlItem={urlItem}
             />
-        </>
+        </>,
+        document.body
     );
 };
 

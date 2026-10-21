@@ -126,7 +126,7 @@ export const QrResult = () => {
                                 onClick={handleDownloadPng}
                             >
                                 <Download size={14} />
-                                <span>Download PNG</span>
+                                <span>Download QR</span>
                             </button>
                         </div>
                     </div>

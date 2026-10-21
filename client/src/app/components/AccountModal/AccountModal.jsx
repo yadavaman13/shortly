@@ -1,12 +1,33 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { User, Mail, ShieldCheck, X, LogOut } from 'lucide-react';
 import './AccountModal.scss';
 
 export const AccountModal = ({ isOpen, onClose, user, onLogout }) => {
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, onClose]);
+
     if (!isOpen || !user) return null;
 
     const initial = user.username ? user.username.charAt(0).toUpperCase() : 'U';
 
-    return (
+    return createPortal(
         <div className="account-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
             <div className="account-modal-card" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
@@ -69,7 +90,8 @@ export const AccountModal = ({ isOpen, onClose, user, onLogout }) => {
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

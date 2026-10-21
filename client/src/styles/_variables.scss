@@ -2,10 +2,10 @@
 
 :root {
     // Primary Brand
-    --accent-primary: #7132f5;
-    --accent-primary-dark: #5741d8;
-    --accent-primary-deep: #5b1ecf;
-    --accent-primary-subtle: rgba(133, 91, 251, 0.16);
+    --accent-primary: #9b74ef;
+    --accent-primary-dark: #8758ee;
+    --accent-primary-deep: #743ce7;
+    --accent-primary-subtle: rgba(155, 116, 239, 0.16);
 
     // Backgrounds
     --bg-primary: #ffffff;
@@ -16,7 +16,7 @@
     // Borders
     --border-subtle: #dedee5;
     --border-medium: rgba(104, 107, 130, 0.24);
-    --border-strong: #7132f5;
+    --border-strong: #9b74ef;
 
     // Text
     --text-primary: #101114;
@@ -40,7 +40,7 @@
     // Depth
     --card-shadow: rgba(0, 0, 0, 0.03) 0px 4px 24px;
     --card-shadow-micro: rgba(16, 24, 40, 0.04) 0px 1px 4px;
-    --focus-ring: 0 0 0 2px rgba(113, 50, 245, 0.4);
+    --focus-ring: 0 0 0 2px rgba(155, 116, 239, 0.4);
 
     // Typography
     --font-display: 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;

@@ -12,6 +12,10 @@
     justify-content: center;
     padding: 1.25rem;
     animation: fadeIn var(--transition-fast) forwards;
+
+    &.edit-url-backdrop {
+        z-index: 1100;
+    }
 }
 
 @keyframes fadeIn {

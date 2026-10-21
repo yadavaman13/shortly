@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { X, Globe, ArrowRight, History, ShieldCheck, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { X, Globe, ArrowRight, History, Loader2 } from 'lucide-react';
 import { useUrlContext } from '../../../url/context/urlContext.jsx';
 import { useQrContext } from '../../context/qrContext.jsx';
 import './EditUrlModal.scss';
@@ -16,6 +17,25 @@ export const EditUrlModal = ({ isOpen, onClose, urlItem }) => {
     const [newDestination, setNewDestination] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [localError, setLocalError] = useState(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isOpen, onClose]);
 
     if (!isOpen || !urlItem) return null;
 
@@ -59,14 +79,11 @@ export const EditUrlModal = ({ isOpen, onClose, urlItem }) => {
         }
     };
 
-    return (
-        <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+    return createPortal(
+        <div className="modal-backdrop edit-url-backdrop" onClick={onClose} role="dialog" aria-modal="true">
             <div className="modal-card edit-url-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <div className="header-title-wrap">
-                        <div className="shield-icon">
-                            <ShieldCheck size={20} />
-                        </div>
                         <div>
                             <h3>Edit Destination</h3>
                             <p className="subtitle">Resilient Link — QR code stays valid forever</p>
@@ -173,7 +190,8 @@ export const EditUrlModal = ({ isOpen, onClose, urlItem }) => {
                     </form>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

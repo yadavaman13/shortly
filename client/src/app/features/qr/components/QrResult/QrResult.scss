@@ -162,7 +162,13 @@
 
                 &:hover {
                     background: var(--accent-primary-dark);
+                    box-shadow: 0 4px 14px rgba(155, 116, 239, 0.35);
                     transform: translateY(-1px);
+                }
+
+                &:active {
+                    transform: translateY(0);
+                    box-shadow: none;
                 }
             }
 

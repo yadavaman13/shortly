@@ -137,15 +137,18 @@
     gap: 0.5rem;
     transition:
         background-color var(--transition-fast),
+        box-shadow var(--transition-fast),
         transform var(--transition-fast);
 
     &:hover:not(:disabled) {
         background-color: var(--accent-primary-dark);
+        box-shadow: 0 4px 14px rgba(155, 116, 239, 0.35);
         transform: translateY(-1px);
     }
 
     &:active:not(:disabled) {
         transform: translateY(0);
+        box-shadow: none;
     }
 
     &:disabled {
