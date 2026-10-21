@@ -1,7 +1,7 @@
-<h1 align="center">Shortly — URL Shortener, Analytics & Resilient QR Codes</h1>
+<h1 align="center">Shortly - URL Shortener, Analytics & Resilient QR Codes</h1>
 
 <p align="center">
-  A high-performance, full-stack URL shortening service, click analytics platform, and dynamic QR code suite built with <strong>React 19</strong>, <strong>Express 5</strong>, <strong>React Router 7</strong>, and <strong>MongoDB</strong>. Features collision-resistant link generation, atomic visit and camera scan tracking, resilient print-safe QR codes with editable destinations, robust JWT cookie authentication with token blacklisting, and a sleek monochromatic design system.
+  A high-performance, full-stack URL shortening service, click analytics platform, and dynamic QR code suite built with <strong>React 19</strong>, <strong>Express 5</strong>, <strong>React Router 7</strong>, and <strong>MongoDB</strong>. Features collision-resistant link generation, atomic visit and camera scan tracking, resilient print-safe QR codes with editable destinations, robust JWT cookie authentication with token blacklisting, and a Kraken-inspired design system.
 </p>
 
 <p align="center">
@@ -22,11 +22,11 @@
 
 - [Overview & Vision](#-overview--vision)
 - [Key Features](#-key-features)
-    - [1. URL Shortening & Instant Redirection](#1-url-shortening--instant-redirection)
-    - [2. Resilient Dynamic QR Codes (Print-Safe)](#2-resilient-dynamic-qr-codes-print-safe)
-    - [3. Dual Analytics (Clicks vs. QR Camera Scans)](#3-dual-analytics-clicks-vs-qr-camera-scans)
-    - [4. Authentication & Session Security](#4-authentication--session-security)
-    - [5. Modern Monochrome UI / UX](#5-modern-monochrome-ui--ux)
+    - [1. Collision-Resistant URL Shortening & Instant Redirection](#1-collision-resistant-url-shortening--instant-redirection)
+    - [2. Resilient Dynamic QR Codes (Print-Safe Architecture)](#2-resilient-dynamic-qr-codes-print-safe-architecture)
+    - [3. Dual Analytics (Clicks vs. Camera Scans)](#3-dual-analytics-clicks-vs-camera-scans)
+    - [4. Enterprise Authentication & Stateful Revocation](#4-enterprise-authentication--stateful-revocation)
+    - [5. Kraken-Inspired Design System & UI/UX](#5-kraken-inspired-design-system--uiux)
 - [System Architecture](#-system-architecture)
 - [Technology Stack](#-technology-stack)
 - [Project Directory Structure](#-project-directory-structure)
@@ -56,12 +56,13 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
 2. **Resilient Dynamic QR Codes**: Generates high-resolution vector/raster QR codes pointing to dynamic short URLs. If the destination URL or business domain changes later, you can update the target anytime without invalidating the physical QR codes already printed.
 3. **Granular Engagement Metrics**: Separates standard browser clicks from physical camera scans via scan-referral tracking (`?ref=qr`).
 4. **Stateful Session Protection**: Complete user authentication featuring HTTP-only JWT cookies, server-side token blacklisting on logout, and multi-tier rate limiting.
+5. **Fintech-Grade User Experience**: Modern, clean, Kraken-inspired interface with fluid tab switching, account management, and real-time feedback.
 
 ---
 
 ## Key Features
 
-### 1. URL Shortening & Instant Redirection
+### 1. Collision-Resistant URL Shortening & Instant Redirection
 
 - **Base62 Collision-Resistant Slugs**: Generates random 6-character alphanumeric identifiers (`[a-zA-Z0-9]`), yielding **56.8+ billion** possible combinations with an automated retry loop.
 - **Atomic Click Tracking**: High-throughput `$inc` updates in MongoDB prevent concurrency race conditions under high traffic.
@@ -70,32 +71,34 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
     - `http://localhost:3000/api/url/redirect/:shortCode` — API-namespaced redirection for programmatic services.
 - **Browser Prefetch Guard**: Intercepts `favicon.ico` browser requests with `204 No Content`, keeping visit counts accurate.
 
-### 2. Resilient Dynamic QR Codes (Print-Safe)
+### 2. Resilient Dynamic QR Codes (Print-Safe Architecture)
 
 - **Permanent Print Reliability**: Physical QR codes encode the immutable short URL (`/:shortCode?ref=qr`). The underlying destination URL can be updated at any time via `PATCH /api/url/:id`.
 - **Target Destination Editing**: Change destination links effortlessly without altering the short code, avoiding broken physical QR assets.
 - **Audit Trail & Version History**: Every destination update records the `previousUrl` and `changedAt` timestamp inside an `editHistory` array on MongoDB.
 - **Instant Preview & Download**: Live in-browser QR generation with options to inspect, download as high-resolution PNG, or copy short links directly.
 
-### 3. Dual Analytics (Clicks vs. QR Camera Scans)
+### 3. Dual Analytics (Clicks vs. Camera Scans)
 
 - **Referral-Aware Metrics**: Differentiates between digital browser clicks and camera/lens scans (`?ref=qr`).
 - **Live Search & Filter**: Instant client-side and server-side link filtering by original URL or short slug, protected against RegExp injection attacks.
 - **Aggregated Performance Cards**: Dashboard displays total links, active QR codes, cumulative clicks, camera scans, and resilient destination updates.
 - **Flexible Identifiers**: Endpoints accept either a 24-character MongoDB `ObjectId` or the 6-character `shortUrl` slug interchangeably.
 
-### 4. Authentication & Session Security
+### 4. Enterprise Authentication & Stateful Revocation
 
 - **Complete User Lifecycle**: Registration, login, profile validation (`/api/auth/me`), and sign-out flows.
 - **Secure Cookie Sessions**: JSON Web Tokens (JWT) are transferred and validated via cookies with `withCredentials: true` in Axios.
 - **Server-Side Token Revocation**: Logging out does not just clear client cookies; it persists the token to a MongoDB `blacklistTokens` collection to prevent replay attacks.
+- **Interactive Account Management**: Top navigation features an account dropdown and a dedicated **Account Profile Modal** displaying active session telemetry and one-click logout.
 - **Route Guards**: Built-in React Router guards (`ProtectedRoute` and `PublicOnlyRoute`) to manage authenticated views and redirect unauthenticated guests gracefully.
 
-### 5. Modern Monochrome UI / UX
+### 5. Kraken-Inspired Design System & UI/UX
 
-- **Design System**: Tailored black-and-white minimalist theme built with pure SCSS tokens, typography pairings, and subtle border highlights.
-- **Theme Switcher**: Fluid Dark and Light mode toggle with persistent state saved in `localStorage`.
-- **Feedback & Feedback Loops**: Instant clipboard copying with visual confirmation, interactive action states, modal dialogs for QR and URL editing, and global auto-dismissing toast notifications.
+- **Design Philosophy**: High-trust, professional aesthetic inspired by Kraken's design language, combining clean white/cool-gray surfaces with commanding purple accents (`#7132f5` / `#9b74ef`).
+- **Unified Main Dashboard**: Seamless single-page experience featuring a glowing hero banner, segmented tab switcher (`[ URL | QR ]`), and synchronized query parameters (`/?tab=qr`).
+- **Typography & Elevation**: Refined typography pairings (`IBM Plex Sans` for display and `Plus Jakarta Sans` for UI) coupled with whisper-soft shadows (`rgba(0, 0, 0, 0.03) 0px 4px 24px`) and 12px rounded components.
+- **Instant Feedback Loops**: Instant clipboard copying with visual confirmation, interactive action states, modal dialogs for QR inspection and URL editing, and global auto-dismissing toast notifications.
 
 ---
 
@@ -112,7 +115,8 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
  │              │                          │                     │        │
  │              ▼                          ▼                     ▼        │
  │  ┌──────────────────────────────────────────────────────────────────┐  │
- │  │ React Router 7 (/, /qr, /login, /register, ProtectedRoute)       │  │
+ │  │ MainDashboard (Segmented Switcher [URL | QR], Hero Banner)       │  │
+ │  │ React Router 7 (/, /qr -> /?tab=qr, /login, /register, Guards)   │  │
  │  │ Axios Client (withCredentials: true, baseURL: /api/*)            │  │
  │  └──────────────────────────────────┬───────────────────────────────┘  │
  └─────────────────────────────────────┼──────────────────────────────────┘
@@ -191,27 +195,30 @@ url-shortner/
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── components/                # Global UI components
-│   │   │   │   ├── Navbar/                # Top navbar with user badge, theme toggle, logout
-│   │   │   │   ├── Footer/                # Informative footer with repo link and tech tags
+│   │   │   │   ├── AccountModal/          # Profile modal with session telemetry & logout
+│   │   │   │   ├── Navbar/                # Top navbar with user dropdown & branding
+│   │   │   │   ├── Footer/                # Informative footer with repo links & tech stack
 │   │   │   │   └── Toast/                 # Feedback toast alerts
-│   │   │   └── features/
-│   │   │       ├── auth/                  # Authentication Module
-│   │   │       │   ├── components/        # LoginForm, RegisterForm
-│   │   │       │   ├── context/           # AuthContext (user, login, logout, checkAuth)
-│   │   │       │   ├── hooks/             # useAuth hook
-│   │   │       │   ├── pages/             # LoginPage, RegisterPage
-│   │   │       │   └── services/          # auth.api.js (Axios endpoints)
-│   │   │       ├── qr/                    # Dynamic Resilient QR Module
-│   │   │       │   ├── components/        # QrForm, QrResult, QrModal, EditUrlModal
-│   │   │       │   ├── context/           # QrContext (QR generation, updates, list sync)
-│   │   │       │   ├── hooks/             # useQr hook
-│   │   │       │   ├── pages/             # QrPage (interactive QR dashboard & print center)
-│   │   │       │   └── services/          # qr.api.js (Axios QR endpoints)
-│   │   │       └── url/                   # Link Management Module
-│   │   │           ├── components/        # UrlCard, UrlForm, UrlList, UrlResult, UrlStats
-│   │   │           ├── context/           # UrlContext (URLs state, creation, deletion)
-│   │   │           ├── hooks/             # useUrls, useClipboard
-│   │   │           └── services/          # url.api.js (Axios URL endpoints)
+│   │   │   ├── features/
+│   │   │   │   ├── auth/                  # Authentication Module
+│   │   │   │   │   ├── components/        # LoginForm, RegisterForm
+│   │   │   │   │   ├── context/           # AuthContext (user, login, logout, checkAuth)
+│   │   │   │   │   ├── hooks/             # useAuth hook
+│   │   │   │   │   ├── pages/             # LoginPage, RegisterPage
+│   │   │   │   │   └── services/          # auth.api.js (Axios endpoints)
+│   │   │   │   ├── qr/                    # Dynamic Resilient QR Module
+│   │   │   │   │   ├── components/        # QrForm, QrResult, QrStats, QrList, QrModal, EditUrlModal
+│   │   │   │   │   ├── context/           # QrContext (QR generation, updates, list sync)
+│   │   │   │   │   ├── hooks/             # useQr hook
+│   │   │   │   │   ├── pages/             # QrPage (QR dashboard)
+│   │   │   │   │   └── services/          # qr.api.js (Axios QR endpoints)
+│   │   │   │   └── url/                   # Link Management Module
+│   │   │   │       ├── components/        # UrlCard, UrlForm, UrlList, UrlResult, UrlStats
+│   │   │   │       ├── context/           # UrlContext (URLs state, creation, deletion)
+│   │   │   │       ├── hooks/             # useUrls, useClipboard
+│   │   │   │       └── services/          # url.api.js (Axios URL endpoints)
+│   │   │   └── pages/
+│   │   │       └── MainDashboard/         # Unified Kraken-inspired dashboard with tab switcher
 │   │   ├── styles/                        # Modular SCSS design tokens, reset, and mixins
 │   │   ├── app.routes.jsx                 # ProtectedRoute, PublicOnlyRoute & Route tree
 │   │   ├── App.jsx                        # Root application component with Providers
@@ -247,6 +254,9 @@ url-shortner/
 │   ├── server.js                          # Database bootstrap & HTTP server entrypoint
 │   └── package.json
 │
+├── docs/                                  # Project documentation & design specs
+│   ├── DESIGN-kraken.md                   # Kraken-inspired design system documentation
+│   └── qrplan.md                          # Dynamic QR implementation blueprints
 ├── .prettierrc                            # Unified code formatting configuration
 ├── .prettierignore                        # Prettier ignore patterns
 ├── package.json                           # Root scripts for repository formatting
@@ -331,7 +341,7 @@ npm run build
 npm start
 ```
 
-1. `npm run build` compiles the React frontend into static assets located in `server/src/public`.
+1. `npm run build` runs `scripts/build-client.js`, compiling the React frontend into static assets located in `server/src/public`, and performs a syntax check on `server.js`.
 2. `npm start` launches Express, which serves the REST API, short link redirects, and the React Single Page Application (SPA) on `http://localhost:3000`.
 
 ---
@@ -594,9 +604,11 @@ GET http://localhost:3000/:shortCode?ref=qr
 1. **Password Encryption**: Passwords are salted and hashed using `bcrypt` (10 rounds). Plaintext passwords are never logged or stored.
 2. **Stateless Token with Stateful Revocation**: JWTs are signed with a server secret (`7d` expiration). To prevent stolen or reused tokens after logout, the token is saved into a `blacklistTokens` collection and rejected on subsequent calls.
 3. **Multi-Tier Rate Limiting**:
-    - `globalLimiter`: 200 requests / 15 minutes across all routes.
-    - `createUrlLimiter`: 10 requests / 1 minute per IP on `POST /api/url` and `POST /api/qr`.
-    - `redirectLimiter`: 60 requests / 1 minute per IP on redirection endpoints.
+
+- `globalLimiter`: 200 requests / 15 minutes across all routes.
+- `createUrlLimiter`: 10 requests / 1 minute per IP on `POST /api/url` and `POST /api/qr`.
+- `redirectLimiter`: 60 requests / 1 minute per IP on redirection endpoints.
+
 4. **Input Validation**: `express-validator` rejects non-HTTP(S) URLs, oversized inputs (> 2048 characters), and invalid parameter formats with structured `422 Unprocessable Entity` payloads.
 5. **Regex Sanitization**: Link search queries are cleansed of special regex control characters prior to building queries, mitigating ReDoS vulnerabilities.
 6. **Immutable Print Guarantee**: Updating a URL's destination preserves the short code, guaranteeing that printed assets remain functional indefinitely.
@@ -612,14 +624,14 @@ GET http://localhost:3000/:shortCode?ref=qr
 
 ### Client Directory (`cd client`)
 
-- `npm run dev`: Launches Vite development server on port 5173.
+- `npm run dev`: Launches Vite development server on port 5173 with proxy to backend.
 - `npm run build`: Bundles the client for distribution.
 - `npm run lint`: Checks for React and JavaScript syntax warnings with ESLint.
 
 ### Server Directory (`cd server`)
 
 - `npm run dev`: Runs the API with live reload via `nodemon`.
-- `npm run build`: Automatically compiles the client and bundles it directly into `server/src/public`.
+- `npm run build`: Automatically compiles the client and bundles it directly into `server/src/public` with syntax verification.
 - `npm start`: Starts the production Express server serving API + static assets.
 
 ---

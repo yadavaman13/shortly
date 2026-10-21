@@ -1,6 +1,6 @@
 # Shortly Server — Architecture & Implementation
 
-A production-grade, modular backend service and high-throughput redirection engine powering the **Shortly** URL shortening platform. Built with **Node.js (ES Modules)**, **Express 5**, and **MongoDB (Mongoose 9)**.
+A production-grade, modular backend service and high-throughput redirection engine powering the **Shortly** URL shortening and dynamic QR platform. Built with **Node.js (ES Modules)**, **Express 5**, and **MongoDB (Mongoose 9)**.
 
 ---
 
@@ -17,11 +17,15 @@ A production-grade, modular backend service and high-throughput redirection engi
     - [Authentication Middleware (`authUser`)](#4-authentication-middleware-authuser)
 - [URL Engine & Redirection Mechanism](#-url-engine--redirection-mechanism)
     - [Base62 Slug Generation & Collision Resistance](#1-base62-slug-generation--collision-resistance)
-    - [Atomic Visit Tracking (`$inc`)](#2-atomic-visit-tracking-inc)
-    - [Dual Redirection Endpoints](#3-dual-redirection-endpoints)
-    - [Browser Prefetch Filtering (`favicon.ico`)](#4-browser-prefetch-filtering-faviconico)
-    - [Dual-Identifier Lookup Strategy](#5-dual-identifier-lookup-strategy)
-    - [ReDoS-Safe URL Search](#6-redos-safe-url-search)
+    - [Reusable `shortenUrl` Pipeline Middleware](#2-reusable-shortenurl-pipeline-middleware)
+    - [Atomic Dual-Counter Tracking (`clicks` vs `qrScans`)](#3-atomic-dual-counter-tracking-clicks-vs-qrscans)
+    - [Resilient Dynamic Destinations & Version Audit History](#4-resilient-dynamic-destinations--version-audit-history)
+    - [Browser Prefetch Filtering (`favicon.ico`)](#5-browser-prefetch-filtering-faviconico)
+    - [Dual-Identifier Lookup Strategy](#6-dual-identifier-lookup-strategy)
+    - [ReDoS-Safe URL Search](#7-redos-safe-url-search)
+- [Dynamic QR Code Generation Engine](#-dynamic-qr-code-generation-engine)
+    - [Print-Safe Architecture](#print-safe-architecture)
+    - [Server-Side Raster & Vector Rendering](#server-side-raster--vector-rendering)
 - [Validation & Traffic Control](#-validation--traffic-control)
     - [express-validator Middleware](#1-express-validator-middleware)
     - [Standardized 422 Error Envelope](#2-standardized-422-error-envelope)
@@ -39,7 +43,8 @@ A production-grade, modular backend service and high-throughput redirection engi
 - [Complete API Reference](#-complete-api-reference)
     - [Authentication API (`/api/auth`)](#1-authentication-api-apiauth)
     - [URL Management API (`/api/url`)](#2-url-management-api-apiurl)
-    - [Public Redirection (`/:shortCode`)](#3-public-redirection-shortcode)
+    - [Dynamic QR Code API (`/api/qr`)](#3-dynamic-qr-code-api-apiqr)
+    - [Public Redirection Engine (`/:shortCode`)](#4-public-redirection-engine-shortcode)
 - [HTTP Status Code Matrix](#-http-status-code-matrix)
 - [Development & Operations](#-development--operations)
 
@@ -47,7 +52,7 @@ A production-grade, modular backend service and high-throughput redirection engi
 
 ## Architectural Overview
 
-The Shortly backend follows a modular, layer-separated architecture using native **ES Modules** (`"type": "module"` in `package.json`). Code is organized by domain modules (`auth`, `url`), clean cross-cutting middleware (validation, rate limiting, authentication), centralized models, and environment safety checks.
+The Shortly backend follows a modular, layer-separated architecture using native **ES Modules** (`"type": "module"` in `package.json`). Code is organized by domain modules (`auth`, `url`, `qr`), clean cross-cutting middleware (validation, rate limiting, authentication, link shortening), centralized Mongoose schemas, and environment safety checks.
 
 ### Request Lifecycle & Middleware Pipeline
 
@@ -76,40 +81,40 @@ The Shortly backend follows a modular, layer-separated architecture using native
                                     │        globalLimiter         │  200 requests / 15 min per IP
                                     └──────────────┬───────────────┘
                                                    │
-           ┌───────────────────────────────────────┼────────────────────────────────────────┐
-           │                                       │                                        │
-           ▼                                       ▼                                        ▼
-┌──────────────────────┐               ┌──────────────────────┐                ┌─────────────────────────┐
-│   /api/auth Router   │               │   /api/url Router    │                │  GET /:shortCode        │
-│                      │               │                      │                │  (Public Redirection)   │
-│  - /register (Val)   │               │  - authUser Guard    │                └────────────┬────────────┘
-│  - /login (Val)      │               │  - Route Rate Limit  │                             │
-│  - /logout           │               │  - express-validator │                             ▼
-│  - /me (JWT Check)   │               │  - URL Controller    │                ┌─────────────────────────┐
-└──────────┬───────────┘               └──────────┬───────────┘                │ findOneAndUpdate($inc)  │
-           │                                      │                            │ 302 Redirect Location   │
-           └───────────────────┬──────────────────┘                            └─────────────────────────┘
-                               │
-                               ▼
-                ┌─────────────────────────────┐
-                │     Mongoose 9 ODM Layer    │
-                │     (MongoDB Atlas/Local)   │
-                └──────────────┬──────────────┘
-                               │
-                               ▼
-        ┌──────────────────────────────────────────────┐
-        │        SPA Fallback Route (Wildcard GET)     │
-        │  Sends server/src/public/index.html for non- │
-        │  API browser routes (e.g. /login, /register) │
-        └──────────────────────────────────────────────┘
+       ┌───────────────────────────────┬───────────┴───────────────────────────────┬───────────────────────────────┐
+       │                               │                                           │                               │
+       ▼                               ▼                                           ▼                               ▼
+┌───────────────┐             ┌─────────────────┐                        ┌─────────────────┐             ┌───────────────────┐
+│   /api/auth   │             │    /api/url     │                        │     /api/qr     │             │  GET /:shortCode  │
+│               │             │                 │                        │                 │             │(Public Redirect)  │
+│- /register    │             │- POST / (Shorten│                        │- POST / (Gen QR)│             └─────────┬─────────┘
+│- /login       │             │- GET / (List)   │                        │- GET / (List QR)│                       │
+│- /logout      │             │- PATCH /:id (Mod│                        └────────┬────────┘                       ▼
+│- /me          │             │- DELETE /:id    │                                 │                       ┌───────────────────┐
+└──────┬────────┘             └────────┬────────┘                                 │                       │ $inc clicks (+qr) │
+       │                               │                                          │                       │ 302 Redirect      │
+       └───────────────────────────────┴────────────────────┬─────────────────────┘                       └───────────────────┘
+                                                            │
+                                                            ▼
+                                             ┌─────────────────────────────┐
+                                             │     Mongoose 9 ODM Layer    │
+                                             │    (users, urls, blacklist)│
+                                             └──────────────┬──────────────┘
+                                                            │
+                                                            ▼
+                                             ┌─────────────────────────────┐
+                                             │      SPA Fallback Route     │
+                                             │  Sends src/public/index.html│
+                                             └─────────────────────────────┘
 ```
 
 ### Design Philosophy
 
 1. **Separation of Concerns**: Routes declare schemas and middleware chains; controllers handle business logic and status codes; models enforce persistence boundaries.
 2. **Defensive Validation**: Bad payloads are caught and rejected with descriptive field-level error messages before touching controller logic or database queries.
-3. **Atomic Concurrency**: Link visits update counters atomically at the database layer using MongoDB's `$inc` operator, preventing lost updates under concurrent access.
-4. **Resilient Defaults**: Strict startup validation ensures the application immediately crashes on launch if required secrets or connection strings are missing, rather than failing subtly during runtime.
+3. **Atomic Concurrency**: Link visits and camera scans update counters atomically at the database layer using MongoDB's `$inc` operator, preventing lost updates under concurrent access.
+4. **Resilient QR Guarantee**: Physical QR codes encode the permanent short URL slug. Target destinations can be modified anytime through `PATCH /api/url/:id` without invalidating physical prints.
+5. **Fail-Fast Startup**: Strict startup validation ensures the application immediately crashes on launch if required secrets or connection strings are missing, rather than failing subtly during runtime.
 
 ---
 
@@ -128,11 +133,12 @@ server/
 │   ├── middleware/
 │   │   ├── auth.middleware.js        # authUser JWT token verification and blacklist check
 │   │   ├── rateLimit.middleware.js   # express-rate-limit tiers (global, creation, redirect)
+│   │   ├── shortenUrl.middleware.js  # Reusable pipeline: code generation & URL storage
 │   │   └── validate.middleware.js    # express-validator schemas and 422 error interceptor
 │   │
 │   ├── models/
 │   │   ├── blacklist.model.js        # Blacklisted JWT tokens schema (revoked sessions)
-│   │   ├── url.model.js              # Shortened URL schema with unique slug index and click counter
+│   │   ├── url.model.js              # Shortened URL schema with click counter, QR flag, & audit log
 │   │   └── user.model.js             # User account schema with hashed credentials
 │   │
 │   ├── modules/
@@ -142,9 +148,15 @@ server/
 │   │   │   └── routes/
 │   │   │       └── auth.route.js     # /api/auth routing definitions
 │   │   │
+│   │   ├── qr/
+│   │   │   ├── controllers/
+│   │   │   │   └── qr.controller.js  # createQr, getAllQrUrls controllers
+│   │   │   └── routes/
+│   │   │       └── qr.routes.js      # /api/qr routing definitions
+│   │   │
 │   │   └── url/
 │   │       ├── controllers/
-│   │       │   └── url.controller.js # shorten, list, getById, delete, redirect controllers
+│   │       │   └── url.controller.js # shorten, list, getById, update, delete, redirect controllers
 │   │       └── routes/
 │   │           └── url.routes.js     # /api/url routing definitions
 │   │
@@ -194,9 +206,11 @@ Traditional stateless JWTs remain valid until their expiration timestamp even if
 
 1. When a user calls `POST /api/auth/logout`, the server extracts the cookie.
 2. The server creates a record in the `blacklistTokens` collection containing the token:
-    ```javascript
-    await blacklistTokenModel.create({ token });
-    ```
+
+```javascript
+await blacklistTokenModel.create({ token });
+```
+
 3. The server clears the cookie via `res.clearCookie('token')`.
 4. Any future request attempting to present this token will be rejected immediately by the authentication middleware.
 
@@ -219,7 +233,7 @@ export async function authUser(req, res, next) {
         }
 
         const decoded = jwt.verify(token, envConfig.JWT_SECRET);
-        req.user = decoded; // { id: '...', iat: ..., exp: ... }
+        req.user = decoded;
         next();
     } catch (err) {
         return res.status(401).json({ message: 'Invalid token' });
@@ -236,15 +250,13 @@ export async function authUser(req, res, next) {
 Short codes are produced by `src/utils/generateCode.js`:
 
 - Uses the standard Base62 character alphabet:
-    ```
+    ```text
     0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
     ```
 - Randomly generates a 6-character string.
 - Permutation space: $62^6 = 56,800,235,584$ (over **56.8 billion** unique combinations).
 
 #### Active Collision Protection Loop
-
-In `createShortenUrl`:
 
 ```javascript
 let shortCode = generateCode();
@@ -262,33 +274,61 @@ while (await urlModel.findOne({ shortUrl: shortCode })) {
 
 If an existing document has the same slug, the engine re-rolls up to 5 times before failing safely.
 
-### 2. Atomic Visit Tracking (`$inc`)
+### 2. Reusable `shortenUrl` Pipeline Middleware
+
+The URL generation and storage logic is factored into a composable middleware factory (`src/middleware/shortenUrl.middleware.js`):
+
+```javascript
+export function shortenUrl(options = {}) {
+    return async (req, res, next) => {
+        // 1. Validates presence and structure of req.body.url
+        // 2. Executes collision-safe slug generation loop
+        // 3. Creates Mongoose document with options.qrGenerated flag
+        // 4. Attaches newly persisted document to req.shortenedUrl
+        next();
+    };
+}
+```
+
+This middleware powers both the standard URL shortener route (`POST /api/url`) and the dynamic QR route (`POST /api/qr`) without code duplication.
+
+### 3. Atomic Dual-Counter Tracking (`clicks` vs `qrScans`)
 
 In high-concurrency environments, reading a document, incrementing the counter in JavaScript, and saving it back causes lost updates (race condition). Shortly prevents this by using MongoDB's atomic `$inc` update operator:
 
 ```javascript
-const urlDoc = await urlModel.findOneAndUpdate(
-    { shortUrl: shortCode },
-    { $inc: { clicks: 1 } },
-    { new: true },
-);
+const isQrScan = req.query.ref === 'qr';
+const updateOps = { $inc: { clicks: 1 } };
+if (isQrScan) {
+    updateOps.$inc.qrScans = 1;
+}
+
+const urlDoc = await urlModel.findOneAndUpdate({ shortUrl: shortCode }, updateOps, { new: true });
 ```
 
-This single query updates the document atomically within the MongoDB engine and returns the updated document in one round-trip.
+- Standard browser clicks increment `clicks`.
+- Physical camera scans (`?ref=qr`) atomically increment both `clicks` and `qrScans`.
 
-### 3. Dual Redirection Endpoints
+### 4. Resilient Dynamic Destinations & Version Audit History
 
-1. **Root Redirection (`GET /:shortCode`)**:
-    - Mounted in `src/app.js`: `app.get('/:shortCode', redirectUrl)`.
-    - Public route for direct end-user navigation (no auth required).
-    - Generates clean links like `http://localhost:3000/k9xL2p`.
-2. **API Redirection (`GET /api/url/redirect/:shortCode`)**:
-    - Mounted in `src/modules/url/routes/url.routes.js`.
-    - Protected by `authUser` and restricted by `redirectLimiter` (60 req/min).
+To protect printed QR codes from becoming obsolete when marketing URLs change, `PATCH /api/url/:id` allows changing the destination URL while retaining the exact same short code:
 
-### 4. Browser Prefetch Filtering (`favicon.ico`)
+```javascript
+if (urlDoc.originalUrl !== trimmedUrl) {
+    urlDoc.editHistory.push({
+        previousUrl: urlDoc.originalUrl,
+        changedAt: new Date(),
+    });
+    urlDoc.originalUrl = trimmedUrl;
+    await urlDoc.save();
+}
+```
 
-Modern browsers automatically request `GET /favicon.ico` when a user loads a URL. Without special handling, the server would interpret `favicon.ico` as a short code, query MongoDB, fail, or miscalculate click metrics:
+Every revision maintains an immutable timestamped log in `editHistory`, providing full traceability.
+
+### 5. Browser Prefetch Filtering (`favicon.ico`)
+
+Modern browsers automatically request `GET /favicon.ico` when loading URLs. Without special handling, the server would interpret `favicon.ico` as a short code, query MongoDB, fail, or miscalculate click metrics:
 
 ```javascript
 if (shortCode === 'favicon.ico') {
@@ -298,9 +338,9 @@ if (shortCode === 'favicon.ico') {
 
 The server immediately responds with `204 No Content` without performing a database lookup.
 
-### 5. Dual-Identifier Lookup Strategy
+### 6. Dual-Identifier Lookup Strategy
 
-Endpoints like `GET /api/url/:id` and `DELETE /api/url/:id` allow users or frontends to pass either a 24-character hexadecimal MongoDB `ObjectId` or the 6-character `shortUrl` string:
+Endpoints like `GET /api/url/:id`, `PATCH /api/url/:id`, and `DELETE /api/url/:id` allow users or frontends to pass either a 24-character hexadecimal MongoDB `ObjectId` or the 6-character `shortUrl` string:
 
 ```javascript
 let url = null;
@@ -314,7 +354,7 @@ if (!url) {
 
 Evaluating `mongoose.Types.ObjectId.isValid(id)` first prevents Mongoose `CastError` exceptions when checking 6-character alphanumeric slugs.
 
-### 6. ReDoS-Safe URL Search
+### 7. ReDoS-Safe URL Search
 
 In `getAllUrls`, search queries from the client (`?search=query`) filter both the original URL and the short code:
 
@@ -332,19 +372,50 @@ All special RegExp metacharacters are escaped prior to regex instantiation, prev
 
 ---
 
+## Dynamic QR Code Generation Engine
+
+### Print-Safe Architecture
+
+1. **Short Link Encoding**: Dynamic QR codes encode the permanent short URL with the camera tracking parameter:
+    ```text
+    http://localhost:3000/:shortCode?ref=qr
+    ```
+2. **Permanent Validity**: Printed physical QR codes never break, because the redirection destination is resolved dynamically at scan-time from MongoDB.
+
+### Server-Side Raster & Vector Rendering
+
+`POST /api/qr` uses the high-performance `qrcode` library to generate Base64 data URLs:
+
+```javascript
+const qrCodeDataUrl = await QRCode.toDataURL(qrTargetUrl, {
+    errorCorrectionLevel: 'M',
+    margin: 2,
+    width: 300,
+    color: {
+        dark: '#000000',
+        light: '#ffffff',
+    },
+});
+```
+
+The resulting PNG Data URL can be rendered directly by client browsers in `<img>` tags or downloaded immediately for print media.
+
+---
+
 ## Validation & Traffic Control
 
 ### 1. express-validator Middleware
 
 Validation rules are consolidated in `src/middleware/validate.middleware.js`:
 
-| Validator Chain          | Target Fields                           | Rules Enforced                                          |
-| :----------------------- | :-------------------------------------- | :------------------------------------------------------ |
-| `validateRegister`       | `username`, `email`, `password`         | Non-empty, valid email syntax, password minimum 8 chars |
-| `validateLogin`          | `email`, `password`                     | Non-empty, valid email syntax, password minimum 8 chars |
-| `validateCreateUrl`      | `url`, `alias` (opt), `expiresIn` (opt) | Valid `http://` or `https://` protocol, max 2048 chars  |
-| `validateIdParam`        | `id`                                    | Non-empty string, max 100 chars                         |
-| `validateShortCodeParam` | `shortCode`                             | Alphanumeric + hyphens, 4–20 characters                 |
+| Validator Chain          | Target Fields                   | Rules Enforced                                          |
+| :----------------------- | :------------------------------ | :------------------------------------------------------ |
+| `validateRegister`       | `username`, `email`, `password` | Non-empty, valid email syntax, password minimum 8 chars |
+| `validateLogin`          | `email`, `password`             | Non-empty, valid email syntax, password minimum 8 chars |
+| `validateCreateUrl`      | `url`                           | Valid `http://` or `https://` protocol, max 2048 chars  |
+| `validateUpdateUrl`      | `url`                           | Valid `http://` or `https://` protocol, max 2048 chars  |
+| `validateIdParam`        | `id`                            | Non-empty string, max 100 chars                         |
+| `validateShortCodeParam` | `shortCode`                     | Alphanumeric + hyphens, 4–20 characters                 |
 
 ### 2. Standardized 422 Error Envelope
 
@@ -373,7 +444,7 @@ Implemented via `express-rate-limit` using standard RFC Draft-7 headers (`RateLi
 2. **Creation Limiter (`createUrlLimiter`)**:
     - `windowMs`: 1 minute (60,000 ms)
     - `max`: 10 requests per IP
-    - Applied on `POST /api/url` to curb bulk link generation spam.
+    - Applied on `POST /api/url` and `POST /api/qr` to curb automated link creation spam.
 3. **Redirection Limiter (`redirectLimiter`)**:
     - `windowMs`: 1 minute (60,000 ms)
     - `max`: 60 requests per IP
@@ -419,17 +490,31 @@ const urlSchema = new mongoose.Schema(
         shortUrl: {
             type: String,
             required: true,
-            unique: true, // Generates unique B-tree index
+            unique: true, // Unique B-tree index
             trim: true,
-            index: true, // Ensures sub-millisecond lookup during redirection
+            index: true, // Sub-millisecond lookup during redirection
         },
         clicks: {
             type: Number,
             default: 0,
         },
+        qrGenerated: {
+            type: Boolean,
+            default: false,
+        },
+        qrScans: {
+            type: Number,
+            default: 0,
+        },
+        editHistory: [
+            {
+                previousUrl: { type: String, required: true },
+                changedAt: { type: Date, default: Date.now },
+            },
+        ],
     },
     {
-        timestamps: true, // Automatically creates createdAt and updatedAt
+        timestamps: true,
     },
 );
 ```
@@ -522,7 +607,7 @@ In `src/app.js`, Express serves static assets from `server/src/public`. For non-
 ```javascript
 app.use(express.static(publicPath));
 
-// API routes mounted here...
+// API routes mounted here (/api/url, /api/qr, /api/auth)...
 
 // SPA Fallback
 app.use((req, res, next) => {
@@ -683,6 +768,9 @@ Retrieves all shortened links, with optional search query filtering.
                         "originalUrl": "https://nodejs.org/docs/latest-v20.x/api/",
                         "shortUrl": "aB3dE1",
                         "clicks": 7,
+                        "qrGenerated": false,
+                        "qrScans": 0,
+                        "editHistory": [],
                         "createdAt": "2026-10-15T06:30:00.000Z",
                         "updatedAt": "2026-10-15T07:15:00.000Z"
                     }
@@ -715,6 +803,42 @@ Retrieves link details by either MongoDB `_id` or 6-character `shortUrl`.
         ```
     - `404 Not Found`: `{ "error": "No url exists with this Id or short code" }`
 
+#### `PATCH /api/url/:id`
+
+Updates the destination `originalUrl` without modifying the short code slug, preserving all physical and digital QR code deployments.
+
+- **Parameters**: `:id` (MongoDB `_id` or 6-character `shortUrl`)
+- **Request Body**:
+    ```json
+    {
+        "url": "https://nodejs.org/docs/latest-v22.x/api/"
+    }
+    ```
+- **Responses**:
+    - `200 OK`:
+        ```json
+        {
+            "message": "Destination URL updated successfully",
+            "data": {
+                "id": "6724a1f3c5d8a9e71b2f4a12",
+                "originalUrl": "https://nodejs.org/docs/latest-v22.x/api/",
+                "shortUrl": "aB3dE1",
+                "fullShortUrl": "http://localhost:3000/aB3dE1",
+                "clicks": 14,
+                "qrScans": 8,
+                "editHistory": [
+                    {
+                        "previousUrl": "https://nodejs.org/docs/latest-v20.x/api/",
+                        "changedAt": "2026-10-21T18:30:00.000Z"
+                    }
+                ],
+                "updatedAt": "2026-10-21T18:30:00.000Z"
+            }
+        }
+        ```
+    - `404 Not Found`: `{ "error": "No url exists with this Id or short code" }`
+    - `422 Unprocessable Entity`: Invalid URL format.
+
 #### `DELETE /api/url/:id`
 
 Deletes a link by either MongoDB `_id` or 6-character `shortUrl`.
@@ -735,35 +859,103 @@ API-namespaced redirection.
 
 ---
 
-### 3. Public Redirection (`/:shortCode`)
+### 3. Dynamic QR Code API (`/api/qr`)
+
+> [!NOTE]
+> All endpoints under `/api/qr` require an authenticated session cookie via `authUser` middleware.
+
+#### `POST /api/qr`
+
+Generates a shortened URL with `qrGenerated: true` and returns a high-resolution Base64 PNG data URL encoding `http://localhost:3000/:shortCode?ref=qr`.
+
+- **Rate Limit**: 10 requests / 1 minute per IP.
+- **Request Body**:
+    ```json
+    {
+        "url": "https://company.org/product-launch"
+    }
+    ```
+- **Responses**:
+    - `201 Created`:
+        ```json
+        {
+            "message": "QR code created successfully",
+            "data": {
+                "id": "6724b9a1c5d8a9e71b2f4b45",
+                "originalUrl": "https://company.org/product-launch",
+                "shortUrl": "7mK9p2",
+                "fullShortUrl": "http://localhost:3000/7mK9p2",
+                "qrTargetUrl": "http://localhost:3000/7mK9p2?ref=qr",
+                "qrCodeDataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+                "qrGenerated": true,
+                "clicks": 0,
+                "qrScans": 0,
+                "createdAt": "2026-10-21T19:00:00.000Z"
+            }
+        }
+        ```
+    - `422 Unprocessable Entity`: Invalid URL syntax.
+
+#### `GET /api/qr`
+
+Retrieves all URLs created through the QR code flow (`qrGenerated: true`).
+
+- **Responses**:
+    - `200 OK`:
+        ```json
+        {
+            "message": "QR URLs fetched successfully",
+            "data": {
+                "urls": [
+                    {
+                        "_id": "6724b9a1c5d8a9e71b2f4b45",
+                        "originalUrl": "https://company.org/product-launch",
+                        "shortUrl": "7mK9p2",
+                        "clicks": 25,
+                        "qrGenerated": true,
+                        "qrScans": 19,
+                        "editHistory": [],
+                        "createdAt": "2026-10-21T19:00:00.000Z",
+                        "updatedAt": "2026-10-21T19:00:00.000Z"
+                    }
+                ]
+            }
+        }
+        ```
+
+---
+
+### 4. Public Redirection Engine (`/:shortCode`)
 
 ```http
 GET http://localhost:3000/:shortCode
+GET http://localhost:3000/:shortCode?ref=qr
 ```
 
 - **Authentication**: None (Public).
 - **Behavior**:
-    - Atomically increments click counter via `$inc`.
-    - Responds with `302 Found` to `originalUrl`.
-    - Returns `204 No Content` for `favicon.ico`.
-    - Returns `404 Not Found` if short code doesn't exist.
+    - Atomically increments the `clicks` counter in MongoDB via `$inc`.
+    - When `?ref=qr` is present (camera scan), simultaneously increments `qrScans: 1`.
+    - Responds with **HTTP 302 Found** directing to the active `originalUrl`.
+    - Intercepts `/favicon.ico` requests with **204 No Content**.
+    - Returns **404 Not Found** if the short code does not exist in MongoDB.
 
 ---
 
 ## HTTP Status Code Matrix
 
-| Status Code                | Meaning                        | Context / Route                                                                                        |
-| :------------------------- | :----------------------------- | :----------------------------------------------------------------------------------------------------- |
-| `200 OK`                   | Success with payload           | `GET /api/url`, `GET /api/url/:id`, `GET /api/auth/me`, `DELETE /api/url/:id`, `POST /api/auth/logout` |
-| `201 Created`              | Resource persisted             | `POST /api/url`, `POST /api/auth/register`                                                             |
-| `204 No Content`           | Handled with no content        | Suppressed browser `GET /favicon.ico`                                                                  |
-| `302 Found`                | HTTP Redirection               | Successful link navigation via `/:shortCode`                                                           |
-| `400 Bad Request`          | Missing input / logic mismatch | Duplicate username/email, missing parameters                                                           |
-| `401 Unauthorized`         | Missing / invalid token        | Protected routes when unauthenticated or token revoked                                                 |
-| `404 Not Found`            | Document not found             | Non-existent short codes or URL IDs                                                                    |
-| `422 Unprocessable Entity` | Validation failure             | Schema rule violations (`express-validator`)                                                           |
-| `429 Too Many Requests`    | Rate limit breached            | Exceeding 10 creates/min, 60 redirects/min, or 200 req/15min                                           |
-| `500 Internal Error`       | Server exception               | Uncaught exception or database connection failure                                                      |
+| Status Code                | Meaning                        | Context / Route                                                                                                                |
+| :------------------------- | :----------------------------- | :----------------------------------------------------------------------------------------------------------------------------- |
+| `200 OK`                   | Success with payload           | `GET /api/url`, `GET /api/qr`, `GET /api/url/:id`, `PATCH /api/url/:id`, `GET /api/auth/me`, `POST /api/auth/logout`, `DELETE` |
+| `201 Created`              | Resource persisted             | `POST /api/url`, `POST /api/qr`, `POST /api/auth/register`                                                                     |
+| `204 No Content`           | Handled with no content        | Suppressed browser `GET /favicon.ico`                                                                                          |
+| `302 Found`                | HTTP Redirection               | Successful link navigation via `/:shortCode` or `/:shortCode?ref=qr`                                                           |
+| `400 Bad Request`          | Missing input / logic mismatch | Duplicate username/email, missing parameters                                                                                   |
+| `401 Unauthorized`         | Missing / invalid token        | Protected routes when unauthenticated or token revoked                                                                         |
+| `404 Not Found`            | Document not found             | Non-existent short codes or URL IDs                                                                                            |
+| `422 Unprocessable Entity` | Validation failure             | Schema rule violations (`express-validator`)                                                                                   |
+| `429 Too Many Requests`    | Rate limit breached            | Exceeding 10 creates/min, 60 redirects/min, or 200 req/15min                                                                   |
+| `500 Internal Error`       | Server exception               | Uncaught exception or database connection failure                                                                              |
 
 ---
 
@@ -787,6 +979,8 @@ npm run dev
 ```bash
 npm run build
 ```
+
+_Compiles React client assets with Vite into `server/src/public` and performs syntax check on `server.js`._
 
 ### Run Server in Production
 
