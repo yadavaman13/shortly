@@ -8,7 +8,6 @@ import {
     Loader2,
     QrCode,
     Edit3,
-    ScanLine,
 } from 'lucide-react';
 import { useClipboard } from '../../hooks/index.js';
 import { QrModal, EditUrlModal } from '../../../qr/components/index.js';
@@ -56,13 +55,6 @@ export const UrlCard = ({ item, onDelete, isDeleting }) => {
                             <MousePointerClick size={12} />
                             {item.clicks ?? 0} clicks
                         </span>
-
-                        {item.qrScans > 0 && (
-                            <span className="clicks-badge qr-scans-badge" title="Scanned via QR">
-                                <ScanLine size={12} />
-                                {item.qrScans} scans
-                            </span>
-                        )}
 
                         {formattedDate && <span className="date-badge">{formattedDate}</span>}
                     </div>
@@ -120,16 +112,16 @@ export const UrlCard = ({ item, onDelete, isDeleting }) => {
                         title={confirmDelete ? 'Click again to confirm deletion' : 'Delete URL'}
                         aria-label="Delete URL"
                     >
-                        {isDeleting ? <Loader2 size={14} className="spinner" /> : <Trash2 size={14} />}
+                        {isDeleting ? (
+                            <Loader2 size={14} className="spinner" />
+                        ) : (
+                            <Trash2 size={14} />
+                        )}
                     </button>
                 </div>
             </div>
 
-            <QrModal
-                isOpen={showQrModal}
-                onClose={() => setShowQrModal(false)}
-                urlItem={item}
-            />
+            <QrModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} urlItem={item} />
 
             <EditUrlModal
                 isOpen={showEditModal}

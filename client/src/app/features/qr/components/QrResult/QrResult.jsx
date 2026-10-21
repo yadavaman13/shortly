@@ -7,7 +7,6 @@ import {
     Edit3,
     ShieldCheck,
     History,
-    ScanLine,
     MousePointerClick,
     X,
     Sparkles,
@@ -19,19 +18,17 @@ import './QrResult.scss';
 
 export const QrResult = () => {
     const { currentQr, clearCurrentQr } = useQrContext();
-    const { generateQrDataUrl, generateQrSvg, downloadPng, downloadSvg } = useQrCode();
+    const { generateQrDataUrl, downloadPng } = useQrCode();
 
-    const [size, setSize] = useState(512);
-    const [foreground, setForeground] = useState('#000000');
-    const [background, setBackground] = useState('#ffffff');
     const [qrDataUrl, setQrDataUrl] = useState('');
-    const [qrSvgString, setQrSvgString] = useState('');
     const [copied, setCopied] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
 
-    const fullShortUrl = currentQr?.fullShortUrl || (currentQr?.shortUrl
-        ? `${window.location.protocol}//${window.location.host}/${currentQr.shortUrl}`
-        : '');
+    const fullShortUrl =
+        currentQr?.fullShortUrl ||
+        (currentQr?.shortUrl
+            ? `${window.location.protocol}//${window.location.host}/${currentQr.shortUrl}`
+            : '');
     const qrTargetUrl = currentQr?.qrTargetUrl || `${fullShortUrl}?ref=qr`;
 
     useEffect(() => {
@@ -41,18 +38,12 @@ export const QrResult = () => {
             if (!currentQr) return;
             try {
                 const dataUrl = await generateQrDataUrl(qrTargetUrl, {
-                    size,
-                    foreground,
-                    background,
-                });
-                const svgString = await generateQrSvg(qrTargetUrl, {
-                    size,
-                    foreground,
-                    background,
+                    size: 1024,
+                    foreground: '#000000',
+                    background: '#ffffff',
                 });
                 if (!isCancelled) {
                     setQrDataUrl(dataUrl);
-                    setQrSvgString(svgString);
                 }
             } catch (err) {
                 console.error('Error generating QR in QrResult:', err);
@@ -66,7 +57,7 @@ export const QrResult = () => {
         return () => {
             isCancelled = true;
         };
-    }, [currentQr, qrTargetUrl, size, foreground, background, generateQrDataUrl, generateQrSvg]);
+    }, [currentQr, qrTargetUrl, generateQrDataUrl]);
 
     if (!currentQr) return null;
 
@@ -80,13 +71,7 @@ export const QrResult = () => {
         downloadPng(qrDataUrl, `shortly-qr-${currentQr.shortUrl}.png`);
     };
 
-    const handleDownloadSvg = () => {
-        downloadSvg(qrSvgString, `shortly-qr-${currentQr.shortUrl}.svg`);
-    };
-
     const totalClicks = currentQr.clicks ?? 0;
-    const qrScans = currentQr.qrScans ?? 0;
-    const directClicks = Math.max(0, totalClicks - qrScans);
     const editHistory = currentQr.editHistory || [];
 
     return (
@@ -111,10 +96,7 @@ export const QrResult = () => {
                 <div className="result-content-grid">
                     {/* Left: QR Canvas Preview & Stats */}
                     <div className="qr-preview-col">
-                        <div
-                            className="qr-canvas-wrapper"
-                            style={{ backgroundColor: background }}
-                        >
+                        <div className="qr-canvas-wrapper" style={{ backgroundColor: '#ffffff' }}>
                             {qrDataUrl ? (
                                 <img
                                     src={qrDataUrl}
@@ -128,23 +110,15 @@ export const QrResult = () => {
 
                         <div className="qr-metrics-bar">
                             <div className="metric-item">
-                                <ScanLine size={14} />
-                                <div>
-                                    <span className="metric-val">{qrScans}</span>
-                                    <span className="metric-lbl">QR Scans</span>
-                                </div>
-                            </div>
-                            <div className="metric-divider" />
-                            <div className="metric-item">
                                 <MousePointerClick size={14} />
                                 <div>
-                                    <span className="metric-val">{directClicks}</span>
-                                    <span className="metric-lbl">Direct Clicks</span>
+                                    <span className="metric-val">{totalClicks}</span>
+                                    <span className="metric-lbl">Total Clicks</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Download buttons */}
+                        {/* Download button (PNG format) */}
                         <div className="download-buttons-row">
                             <button
                                 type="button"
@@ -154,18 +128,10 @@ export const QrResult = () => {
                                 <Download size={14} />
                                 <span>Download PNG</span>
                             </button>
-                            <button
-                                type="button"
-                                className="btn-dl secondary"
-                                onClick={handleDownloadSvg}
-                            >
-                                <Download size={14} />
-                                <span>Download SVG</span>
-                            </button>
                         </div>
                     </div>
 
-                    {/* Right: Link Info, Customizer, Resilient Status */}
+                    {/* Right: Link Info, Resilient Status */}
                     <div className="qr-details-col">
                         <div className="short-url-banner">
                             <div className="url-meta">
@@ -191,50 +157,6 @@ export const QrResult = () => {
                                 >
                                     <ExternalLink size={14} />
                                 </a>
-                            </div>
-                        </div>
-
-                        {/* Customization controls */}
-                        <div className="style-controls-card">
-                            <span className="card-label">QR Customizer</span>
-                            <div className="style-controls-grid">
-                                <div className="style-group">
-                                    <span className="group-label">Resolution</span>
-                                    <div className="pill-group">
-                                        {[256, 512, 1024].map((s) => (
-                                            <button
-                                                key={s}
-                                                type="button"
-                                                className={`pill-btn ${size === s ? 'active' : ''}`}
-                                                onClick={() => setSize(s)}
-                                            >
-                                                {s}px
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="style-group">
-                                    <span className="group-label">Palette</span>
-                                    <div className="colors-row">
-                                        <div className="color-pair">
-                                            <span>Pattern</span>
-                                            <input
-                                                type="color"
-                                                value={foreground}
-                                                onChange={(e) => setForeground(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="color-pair">
-                                            <span>Background</span>
-                                            <input
-                                                type="color"
-                                                value={background}
-                                                onChange={(e) => setBackground(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -273,16 +195,22 @@ export const QrResult = () => {
                                         <span>Edit History</span>
                                     </div>
                                     <ul className="history-items">
-                                        {editHistory.slice(-2).reverse().map((h, i) => (
-                                            <li key={i} className="history-row">
-                                                <span className="prev-url" title={h.previousUrl}>
-                                                    {h.previousUrl}
-                                                </span>
-                                                <span className="prev-date">
-                                                    {new Date(h.changedAt).toLocaleDateString()}
-                                                </span>
-                                            </li>
-                                        ))}
+                                        {editHistory
+                                            .slice(-2)
+                                            .reverse()
+                                            .map((h, i) => (
+                                                <li key={i} className="history-row">
+                                                    <span
+                                                        className="prev-url"
+                                                        title={h.previousUrl}
+                                                    >
+                                                        {h.previousUrl}
+                                                    </span>
+                                                    <span className="prev-date">
+                                                        {new Date(h.changedAt).toLocaleDateString()}
+                                                    </span>
+                                                </li>
+                                            ))}
                                     </ul>
                                 </div>
                             )}

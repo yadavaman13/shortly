@@ -1,12 +1,19 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { RegisterForm } from '../../components/index.js';
 import '../LoginPage/LoginPage.scss';
 
 export const RegisterPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const fromState = location.state?.from;
+    const from = typeof fromState === 'string'
+        ? fromState
+        : (fromState?.pathname
+            ? `${fromState.pathname}${fromState.search || ''}`
+            : '/');
 
     const handleSuccess = () => {
-        navigate('/', { replace: true });
+        navigate(from, { replace: true });
     };
 
     return (
@@ -21,7 +28,7 @@ export const RegisterPage = () => {
 
                 <div className="auth-footer">
                     <span>Already have an account? </span>
-                    <Link to="/login">Sign in</Link>
+                    <Link to="/login" state={{ from: location.state?.from }}>Sign in</Link>
                 </div>
             </div>
         </div>

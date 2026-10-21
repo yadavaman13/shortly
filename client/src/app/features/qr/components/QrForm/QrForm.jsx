@@ -1,15 +1,64 @@
 import { useState } from 'react';
-import { Link2, ArrowRight, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { QrCode, ArrowRight, Loader2, Clipboard, X } from 'lucide-react';
 import { useQrContext } from '../../context/qrContext.jsx';
+import { useAuth } from '../../../auth/hooks/useAuth.js';
 import './QrForm.scss';
 
 export const QrForm = () => {
     const { generateQr, submitting, error, clearError } = useQrContext();
-    const [urlInput, setUrlInput] = useState('');
+    const { isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const [urlInput, setUrlInput] = useState(() => {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+            const saved = sessionStorage.getItem('shortly_pending_qr_url');
+            if (saved) {
+                sessionStorage.removeItem('shortly_pending_qr_url');
+                return saved;
+            }
+        }
+        return '';
+    });
     const [validationError, setValidationError] = useState('');
+
+    const handlePaste = async () => {
+        try {
+            if (navigator?.clipboard?.readText) {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    setUrlInput(text.trim());
+                    if (validationError) setValidationError('');
+                    if (error && clearError) clearError();
+                }
+            }
+        } catch (err) {
+            console.warn('Clipboard read permission denied or unavailable:', err);
+        }
+    };
+
+    const handleButtonClick = (e) => {
+        if (!isAuthenticated) {
+            e.preventDefault();
+            if (urlInput.trim()) {
+                sessionStorage.setItem('shortly_pending_qr_url', urlInput.trim());
+            }
+            navigate('/login', { state: { from: location } });
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!isAuthenticated) {
+            if (urlInput.trim()) {
+                sessionStorage.setItem('shortly_pending_qr_url', urlInput.trim());
+            }
+            navigate('/login', { state: { from: location } });
+            return;
+        }
+
         setValidationError('');
         if (clearError) clearError();
 
@@ -33,63 +82,88 @@ export const QrForm = () => {
     };
 
     return (
-        <section className="qr-form-section">
-            <div className="qr-form-card">
-                <div className="qr-form-badge-row">
-                    <span className="resilient-badge">
-                        <ShieldCheck size={13} />
-                        Resilient Dynamic QR
+        <div className="url-form-container">
+            <div className="url-form-header">
+                <h2 className="form-title">Generate a dynamic QR code</h2>
+                <p className="form-subtitle">
+                    Enter any long URL to create a permanent, update-resilient dynamic QR code.
+                </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="url-form" noValidate>
+                <div className={`input-group-main ${validationError || error ? 'has-error' : ''}`}>
+                    <span className="input-icon">
+                        <QrCode size={18} />
                     </span>
-                    <span className="badge-hint">
-                        Never breaks if the destination link or domain changes
-                    </span>
+
+                    <input
+                        type="url"
+                        className="main-url-input"
+                        placeholder="https://example.com/very-long-destination-url..."
+                        value={urlInput}
+                        onChange={(e) => {
+                            setUrlInput(e.target.value);
+                            if (validationError) setValidationError('');
+                            if (error && clearError) clearError();
+                        }}
+                        autoComplete="off"
+                        spellCheck="false"
+                        disabled={submitting}
+                    />
+
+                    <div className="input-actions">
+                        {urlInput ? (
+                            <button
+                                type="button"
+                                className="clear-btn"
+                                onClick={() => {
+                                    setUrlInput('');
+                                    if (validationError) setValidationError('');
+                                    if (error && clearError) clearError();
+                                }}
+                                title="Clear URL"
+                                aria-label="Clear input"
+                            >
+                                <X size={14} />
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className="paste-btn"
+                                onClick={handlePaste}
+                                title="Paste from clipboard"
+                            >
+                                <Clipboard size={13} />
+                                <span>Paste</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="qr-input-form">
-                    <div className="qr-input-group">
-                        <div className="input-icon">
-                            <Link2 size={18} />
-                        </div>
-                        <input
-                            type="url"
-                            className="qr-text-input"
-                            placeholder="Enter long destination URL (e.g. https://mycompany.com/promo)..."
-                            value={urlInput}
-                            onChange={(e) => {
-                                setUrlInput(e.target.value);
-                                if (validationError) setValidationError('');
-                            }}
-                            disabled={submitting}
-                            required
-                        />
-                        <button
-                            type="submit"
-                            className="btn-generate-qr"
-                            disabled={submitting || !urlInput.trim()}
-                        >
-                            {submitting ? (
-                                <>
-                                    <Loader2 size={16} className="spinner" />
-                                    <span>Generating...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles size={16} />
-                                    <span>Generate QR</span>
-                                    <ArrowRight size={16} />
-                                </>
-                            )}
-                        </button>
-                    </div>
+                {(validationError || error) && (
+                    <div className="field-error">{validationError || error}</div>
+                )}
 
-                    {(validationError || error) && (
-                        <div className="qr-form-error">
-                            {validationError || error}
-                        </div>
+                <button
+                    type="submit"
+                    className="submit-btn"
+                    disabled={submitting || (isAuthenticated && !urlInput.trim())}
+                    onClick={handleButtonClick}
+                >
+                    {submitting ? (
+                        <>
+                            <Loader2 size={16} className="spinner" />
+                            <span>Generating QR Code...</span>
+                        </>
+                    ) : (
+                        <>
+                            <span>Generate QR Code</span>
+                            <ArrowRight size={16} />
+                        </>
                     )}
-                </form>
-            </div>
-        </section>
+                </button>
+            </form>
+        </div>
     );
 };
 

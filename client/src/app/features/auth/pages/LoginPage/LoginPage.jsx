@@ -5,7 +5,12 @@ import './LoginPage.scss';
 export const LoginPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const from = location.state?.from?.pathname || '/';
+    const fromState = location.state?.from;
+    const from = typeof fromState === 'string'
+        ? fromState
+        : (fromState?.pathname
+            ? `${fromState.pathname}${fromState.search || ''}`
+            : '/');
 
     const handleSuccess = () => {
         navigate(from, { replace: true });
@@ -23,7 +28,7 @@ export const LoginPage = () => {
 
                 <div className="auth-footer">
                     <span>Don&apos;t have an account? </span>
-                    <Link to="/register">Create one</Link>
+                    <Link to="/register" state={{ from: location.state?.from }}>Create one</Link>
                 </div>
             </div>
         </div>

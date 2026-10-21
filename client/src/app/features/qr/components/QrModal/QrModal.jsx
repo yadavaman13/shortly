@@ -6,8 +6,6 @@ import {
     Copy,
     Check,
     Edit3,
-    Eye,
-    ScanLine,
     MousePointerClick,
     ExternalLink,
 } from 'lucide-react';
@@ -16,13 +14,9 @@ import { EditUrlModal } from '../EditUrlModal/EditUrlModal.jsx';
 import './QrModal.scss';
 
 export const QrModal = ({ isOpen, onClose, urlItem }) => {
-    const { generateQrDataUrl, generateQrSvg, downloadPng, downloadSvg } = useQrCode();
+    const { generateQrDataUrl, downloadPng } = useQrCode();
 
-    const [size, setSize] = useState(512);
-    const [foreground, setForeground] = useState('#000000');
-    const [background, setBackground] = useState('#ffffff');
     const [qrDataUrl, setQrDataUrl] = useState('');
-    const [qrSvgString, setQrSvgString] = useState('');
     const [copied, setCopied] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
 
@@ -38,18 +32,12 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
             if (!urlItem) return;
             try {
                 const dataUrl = await generateQrDataUrl(qrTargetUrl, {
-                    size,
-                    foreground,
-                    background,
-                });
-                const svgString = await generateQrSvg(qrTargetUrl, {
-                    size,
-                    foreground,
-                    background,
+                    size: 1024,
+                    foreground: '#000000',
+                    background: '#ffffff',
                 });
                 if (!isCancelled) {
                     setQrDataUrl(dataUrl);
-                    setQrSvgString(svgString);
                 }
             } catch (err) {
                 console.error('Error generating QR in modal:', err);
@@ -63,7 +51,7 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
         return () => {
             isCancelled = true;
         };
-    }, [isOpen, urlItem, qrTargetUrl, size, foreground, background, generateQrDataUrl, generateQrSvg]);
+    }, [isOpen, urlItem, qrTargetUrl, generateQrDataUrl]);
 
     if (!isOpen || !urlItem) return null;
 
@@ -77,13 +65,7 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
         downloadPng(qrDataUrl, `qr-${urlItem.shortUrl}.png`);
     };
 
-    const handleDownloadSvg = () => {
-        downloadSvg(qrSvgString, `qr-${urlItem.shortUrl}.svg`);
-    };
-
     const totalClicks = urlItem.clicks ?? 0;
-    const qrScans = urlItem.qrScans ?? 0;
-    const directClicks = Math.max(0, totalClicks - qrScans);
 
     return (
         <>
@@ -112,10 +94,7 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
                     <div className="modal-body qr-modal-body">
                         {/* QR Code Preview Frame */}
                         <div className="qr-preview-container">
-                            <div
-                                className="qr-canvas-box"
-                                style={{ backgroundColor: background }}
-                            >
+                            <div className="qr-canvas-box" style={{ backgroundColor: '#ffffff' }}>
                                 {qrDataUrl ? (
                                     <img
                                         src={qrDataUrl}
@@ -127,16 +106,11 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
                                 )}
                             </div>
 
-                            {/* Scan count badge overlay */}
+                            {/* Clicks badge overlay */}
                             <div className="qr-stats-pill">
-                                <span className="stat-pill-item" title="Scanned via camera/scanner">
-                                    <ScanLine size={13} />
-                                    <strong>{qrScans}</strong> scans
-                                </span>
-                                <span className="stat-divider">•</span>
-                                <span className="stat-pill-item" title="Clicked directly in browser">
+                                <span className="stat-pill-item" title="Total link clicks">
                                     <MousePointerClick size={13} />
-                                    <strong>{directClicks}</strong> direct
+                                    <strong>{totalClicks}</strong> clicks
                                 </span>
                             </div>
                         </div>
@@ -166,50 +140,6 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
                             </a>
                         </div>
 
-                        {/* Customization controls */}
-                        <div className="customizer-panel">
-                            <span className="section-title">Customize Appearance</span>
-                            <div className="controls-grid">
-                                <div className="control-group">
-                                    <label>Size</label>
-                                    <div className="pill-selector">
-                                        {[256, 512, 1024].map((s) => (
-                                            <button
-                                                key={s}
-                                                type="button"
-                                                className={`pill-btn ${size === s ? 'active' : ''}`}
-                                                onClick={() => setSize(s)}
-                                            >
-                                                {s}px
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="control-group">
-                                    <label>Colors</label>
-                                    <div className="color-pickers">
-                                        <div className="color-picker-item" title="Pattern Color">
-                                            <span className="color-label">Pattern</span>
-                                            <input
-                                                type="color"
-                                                value={foreground}
-                                                onChange={(e) => setForeground(e.target.value)}
-                                            />
-                                        </div>
-                                        <div className="color-picker-item" title="Background Color">
-                                            <span className="color-label">Background</span>
-                                            <input
-                                                type="color"
-                                                value={background}
-                                                onChange={(e) => setBackground(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Resilient QR Destination Banner */}
                         <div className="resilient-destination-banner">
                             <div className="destination-info">
@@ -229,7 +159,7 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
                             </button>
                         </div>
 
-                        {/* Download Action Buttons */}
+                        {/* Download Action Button (PNG format) */}
                         <div className="download-actions-grid">
                             <button
                                 type="button"
@@ -238,14 +168,6 @@ export const QrModal = ({ isOpen, onClose, urlItem }) => {
                             >
                                 <Download size={15} />
                                 <span>Download PNG</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-download secondary"
-                                onClick={handleDownloadSvg}
-                            >
-                                <Download size={15} />
-                                <span>Download SVG</span>
                             </button>
                         </div>
                     </div>

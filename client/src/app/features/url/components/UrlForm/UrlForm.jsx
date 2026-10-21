@@ -1,10 +1,37 @@
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Link as LinkIcon, ArrowRight, Loader2, Clipboard, X } from 'lucide-react';
 import { useShortenForm } from '../../hooks/index.js';
+import { useAuth } from '../../../auth/hooks/useAuth.js';
 import './UrlForm.scss';
 
 export const UrlForm = () => {
-    const { formData, formErrors, submitting, handleChange, handlePaste, handleSubmit, resetForm } =
+    const { isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { formData, formErrors, submitting, handleChange, handlePaste, handleSubmit } =
         useShortenForm();
+
+    const handleFormSubmit = (e) => {
+        e.preventDefault();
+        if (!isAuthenticated) {
+            if (formData.url.trim()) {
+                sessionStorage.setItem('shortly_pending_url', formData.url.trim());
+            }
+            navigate('/login', { state: { from: location } });
+            return;
+        }
+        handleSubmit(e);
+    };
+
+    const handleButtonClick = (e) => {
+        if (!isAuthenticated) {
+            e.preventDefault();
+            if (formData.url.trim()) {
+                sessionStorage.setItem('shortly_pending_url', formData.url.trim());
+            }
+            navigate('/login', { state: { from: location } });
+        }
+    };
 
     return (
         <div className="url-form-container">
@@ -15,7 +42,7 @@ export const UrlForm = () => {
                 </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="url-form" noValidate>
+            <form onSubmit={handleFormSubmit} className="url-form" noValidate>
                 <div className={`input-group-main ${formErrors.url ? 'has-error' : ''}`}>
                     <span className="input-icon">
                         <LinkIcon size={18} />
@@ -62,7 +89,8 @@ export const UrlForm = () => {
                 <button
                     type="submit"
                     className="submit-btn"
-                    disabled={submitting || !formData.url.trim()}
+                    disabled={submitting || (isAuthenticated && !formData.url.trim())}
+                    onClick={handleButtonClick}
                 >
                     {submitting ? (
                         <>

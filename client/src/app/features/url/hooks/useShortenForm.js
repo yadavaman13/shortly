@@ -5,12 +5,23 @@ const INITIAL_FORM = {
     url: '',
 };
 
+const getInitialForm = () => {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+        const saved = sessionStorage.getItem('shortly_pending_url');
+        if (saved) {
+            sessionStorage.removeItem('shortly_pending_url');
+            return { url: saved };
+        }
+    }
+    return INITIAL_FORM;
+};
+
 /**
  * Custom hook to manage URL shortening form state and client validations
  */
 export function useShortenForm() {
     const { shortenUrl, submitting, error, clearError } = useUrlContext();
-    const [formData, setFormData] = useState(INITIAL_FORM);
+    const [formData, setFormData] = useState(getInitialForm);
     const [formErrors, setFormErrors] = useState({});
 
     const validate = useCallback(() => {
