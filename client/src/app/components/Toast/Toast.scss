@@ -24,22 +24,21 @@
     border-radius: $border-radius-md;
     font-size: 0.85rem;
     font-weight: 500;
-    box-shadow:
-        0 10px 15px -3px rgba(0, 0, 0, 0.2),
-        0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
     animation: toastPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 
     &.info,
     &.success {
-        background: var(--accent-black);
-        color: var(--accent-white);
-        border: 1px solid var(--border-medium);
+        background: var(--accent-primary);
+        color: #ffffff;
+        border: 1px solid var(--accent-primary-dark);
     }
 
     &.error {
-        background: #18181b;
-        color: #fca5a5;
-        border: 1px solid #ef4444;
+        background: #ffffff;
+        color: var(--error-color);
+        border: 1px solid var(--error-color);
+        box-shadow: var(--card-shadow);
     }
 
     .toast-icon {

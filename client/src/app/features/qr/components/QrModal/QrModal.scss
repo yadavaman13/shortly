@@ -11,7 +11,7 @@
     border-radius: $border-radius-md;
     background: var(--bg-tertiary);
     border: 1px solid var(--border-subtle);
-    color: var(--accent-black);
+    color: var(--accent-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -121,13 +121,13 @@
         transition: all var(--transition-fast);
 
         &:hover {
-            border-color: var(--border-strong);
+            border-color: var(--accent-primary);
         }
 
         &.copied {
-            background: #22c55e;
+            background: var(--success-accent);
             color: #ffffff;
-            border-color: #22c55e;
+            border-color: var(--success-accent);
         }
     }
 
@@ -196,13 +196,13 @@
                     transition: all var(--transition-fast);
 
                     &:hover {
-                        color: var(--text-primary);
+                        color: var(--accent-primary);
                     }
 
                     &.active {
-                        background: var(--accent-black);
-                        color: var(--accent-white);
-                        border-color: var(--accent-black);
+                        background: var(--accent-primary);
+                        color: #ffffff;
+                        border-color: var(--accent-primary);
                         font-weight: 600;
                     }
                 }
@@ -296,7 +296,8 @@
 
         &:hover {
             background: var(--bg-tertiary);
-            border-color: var(--border-strong);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
         }
     }
 }
@@ -316,15 +317,15 @@
         padding: 0.7rem 1rem;
         font-size: 0.85rem;
         font-weight: 600;
-        border-radius: $border-radius-md;
+        border-radius: $border-radius-lg;
         transition: all var(--transition-fast);
 
         &.primary {
-            background: var(--accent-black);
-            color: var(--accent-white);
+            background: var(--accent-primary);
+            color: #ffffff;
 
             &:hover {
-                opacity: 0.9;
+                background: var(--accent-primary-dark);
                 transform: translateY(-1px);
             }
         }
@@ -336,7 +337,8 @@
 
             &:hover {
                 background: var(--bg-tertiary);
-                border-color: var(--border-strong);
+                border-color: var(--accent-primary);
+                color: var(--accent-primary);
                 transform: translateY(-1px);
             }
         }

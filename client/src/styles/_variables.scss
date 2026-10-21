@@ -1,70 +1,61 @@
-// Black and White Minimalist Design System Tokens
+// Kraken-Inspired Design System Tokens (Light Mode Only)
 
-// Light Theme (Default / Root)
 :root {
+    // Primary Brand
+    --accent-primary: #7132f5;
+    --accent-primary-dark: #5741d8;
+    --accent-primary-deep: #5b1ecf;
+    --accent-primary-subtle: rgba(133, 91, 251, 0.16);
+
+    // Backgrounds
     --bg-primary: #ffffff;
-    --bg-secondary: #fafafa;
-    --bg-tertiary: #f4f4f5;
+    --bg-secondary: #f8f8fa;
+    --bg-tertiary: #f1f1f5;
     --bg-elevated: #ffffff;
 
-    --border-subtle: #e4e4e7;
-    --border-medium: #d4d4d8;
-    --border-strong: #18181b;
+    // Borders
+    --border-subtle: #dedee5;
+    --border-medium: rgba(104, 107, 130, 0.24);
+    --border-strong: #7132f5;
 
-    --text-primary: #09090b;
-    --text-secondary: #52525b;
-    --text-muted: #71717a;
-    --text-subtle: #a1a1aa;
+    // Text
+    --text-primary: #101114;
+    --text-secondary: #686b82;
+    --text-muted: #9497a9;
+    --text-subtle: #b0b3c1;
 
-    --accent-black: #000000;
-    --accent-white: #ffffff;
+    // Semantic
+    --success-bg: rgba(20, 158, 97, 0.16);
+    --success-text: #026b3f;
+    --success-accent: #149e61;
+    --error-color: #ef4444;
+    --error-bg: rgba(239, 68, 68, 0.1);
+    --error-border: rgba(239, 68, 68, 0.25);
 
-    --badge-bg: #f4f4f5;
-    --badge-text: #18181b;
-    --badge-border: #e4e4e7;
+    // Badge
+    --badge-bg: rgba(104, 107, 130, 0.12);
+    --badge-text: #484b5e;
+    --badge-border: rgba(104, 107, 130, 0.18);
 
-    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
-    --focus-ring: 0 0 0 2px #000000;
+    // Depth
+    --card-shadow: rgba(0, 0, 0, 0.03) 0px 4px 24px;
+    --card-shadow-micro: rgba(16, 24, 40, 0.04) 0px 1px 4px;
+    --focus-ring: 0 0 0 2px rgba(113, 50, 245, 0.4);
 
-    --font-sans:
-        'Plus Jakarta Sans', 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-        sans-serif;
+    // Typography
+    --font-display: 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
 
+    // Motion
     --transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
     --transition-base: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-// Dark Theme (Explicit or class-based)
-[data-theme='dark'] {
-    --bg-primary: #09090b;
-    --bg-secondary: #121214;
-    --bg-tertiary: #18181b;
-    --bg-elevated: #141416;
-
-    --border-subtle: #27272a;
-    --border-medium: #3f3f46;
-    --border-strong: #fafafa;
-
-    --text-primary: #fafafa;
-    --text-secondary: #a1a1aa;
-    --text-muted: #71717a;
-    --text-subtle: #52525b;
-
-    --accent-black: #ffffff;
-    --accent-white: #000000;
-
-    --badge-bg: #1c1c20;
-    --badge-text: #f4f4f5;
-    --badge-border: #27272a;
-
-    --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
-    --focus-ring: 0 0 0 2px #ffffff;
-}
-
+$font-display: var(--font-display);
 $font-sans: var(--font-sans);
 $font-mono: var(--font-mono);
-$border-radius-sm: 4px;
-$border-radius-md: 8px;
+$border-radius-sm: 6px;
+$border-radius-md: 10px;
 $border-radius-lg: 12px;
 $border-radius-full: 9999px;

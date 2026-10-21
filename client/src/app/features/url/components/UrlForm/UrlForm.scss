@@ -51,12 +51,12 @@
         box-shadow var(--transition-fast);
 
     &:focus-within {
-        border-color: var(--text-primary);
-        box-shadow: 0 0 0 1px var(--text-primary);
+        border-color: var(--accent-primary);
+        box-shadow: var(--focus-ring);
     }
 
     &.has-error {
-        border-color: #ef4444;
+        border-color: var(--error-color);
     }
 
     .input-icon {
@@ -114,7 +114,7 @@
 
 .field-error {
     font-size: 0.8rem;
-    color: #ef4444;
+    color: var(--error-color);
     display: flex;
     align-items: center;
     gap: 0.35rem;
@@ -124,10 +124,10 @@
 .submit-btn {
     @include button-reset;
     width: 100%;
-    padding: 0.875rem 1.5rem;
-    background-color: var(--accent-black);
-    color: var(--accent-white);
-    border-radius: $border-radius-md;
+    padding: 13px 16px;
+    background-color: var(--accent-primary);
+    color: #ffffff;
+    border-radius: $border-radius-lg;
     font-size: 0.925rem;
     font-weight: 600;
     letter-spacing: -0.01em;
@@ -136,11 +136,11 @@
     justify-content: center;
     gap: 0.5rem;
     transition:
-        opacity var(--transition-fast),
+        background-color var(--transition-fast),
         transform var(--transition-fast);
 
     &:hover:not(:disabled) {
-        opacity: 0.9;
+        background-color: var(--accent-primary-dark);
         transform: translateY(-1px);
     }
 

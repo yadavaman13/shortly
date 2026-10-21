@@ -48,7 +48,7 @@
 
                 &:focus {
                     outline: none;
-                    border-color: var(--border-strong);
+                    border-color: var(--accent-primary);
                     box-shadow: var(--focus-ring);
                 }
             }
@@ -71,10 +71,10 @@
 
     .form-error {
         padding: 0.75rem 1rem;
-        background-color: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.25);
+        background-color: var(--error-bg);
+        border: 1px solid var(--error-border);
         border-radius: $border-radius-md;
-        color: #ef4444;
+        color: var(--error-color);
         font-size: 0.875rem;
         display: flex;
         align-items: center;
@@ -85,19 +85,19 @@
         @include button-reset;
         width: 100%;
         height: 2.75rem;
-        background-color: var(--accent-black);
-        color: var(--accent-white);
-        border-radius: $border-radius-md;
+        background-color: var(--accent-primary);
+        color: #ffffff;
+        border-radius: $border-radius-lg;
         font-weight: 600;
         font-size: 0.9375rem;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        transition: opacity var(--transition-fast), transform var(--transition-fast);
+        transition: background-color var(--transition-fast), transform var(--transition-fast);
 
         &:hover:not(:disabled) {
-            opacity: 0.9;
+            background-color: var(--accent-primary-dark);
             transform: translateY(-1px);
         }
 

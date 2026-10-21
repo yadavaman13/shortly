@@ -55,7 +55,8 @@
 @mixin card-surface {
     background-color: var(--bg-elevated);
     border: 1px solid var(--border-subtle);
-    border-radius: $border-radius-md;
+    border-radius: $border-radius-lg;
+    box-shadow: var(--card-shadow-micro);
     transition:
         border-color var(--transition-fast),
         background-color var(--transition-fast);

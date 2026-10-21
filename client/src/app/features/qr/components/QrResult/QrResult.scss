@@ -29,10 +29,10 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             padding: 0.2rem 0.6rem;
-            border-radius: $border-radius-full;
-            background: var(--badge-bg);
-            color: var(--badge-text);
-            border: 1px solid var(--badge-border);
+            border-radius: 6px;
+            background: var(--accent-primary-subtle);
+            color: var(--accent-primary);
+            border: 1px solid rgba(113, 50, 245, 0.2);
         }
 
         .btn-dismiss {
@@ -153,15 +153,15 @@
             padding: 0.55rem 0.65rem;
             font-size: 0.775rem;
             font-weight: 600;
-            border-radius: $border-radius-sm;
+            border-radius: $border-radius-lg;
             transition: all var(--transition-fast);
 
             &.primary {
-                background: var(--accent-black);
-                color: var(--accent-white);
+                background: var(--accent-primary);
+                color: #ffffff;
 
                 &:hover {
-                    opacity: 0.9;
+                    background: var(--accent-primary-dark);
                     transform: translateY(-1px);
                 }
             }
@@ -173,7 +173,8 @@
 
                 &:hover {
                     background: var(--bg-tertiary);
-                    border-color: var(--border-strong);
+                    border-color: var(--accent-primary);
+                    color: var(--accent-primary);
                 }
             }
         }
@@ -240,13 +241,13 @@
             transition: all var(--transition-fast);
 
             &:hover {
-                border-color: var(--border-strong);
+                border-color: var(--accent-primary);
             }
 
             &.copied {
-                background: #22c55e;
+                background: var(--success-accent);
                 color: #ffffff;
-                border-color: #22c55e;
+                border-color: var(--success-accent);
             }
         }
 
@@ -316,13 +317,13 @@
                     transition: all var(--transition-fast);
 
                     &:hover {
-                        color: var(--text-primary);
+                        color: var(--accent-primary);
                     }
 
                     &.active {
-                        background: var(--accent-black);
-                        color: var(--accent-white);
-                        border-color: var(--accent-black);
+                        background: var(--accent-primary);
+                        color: #ffffff;
+                        border-color: var(--accent-primary);
                         font-weight: 600;
                     }
                 }
@@ -390,7 +391,7 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            color: var(--accent-black);
+            color: var(--accent-primary);
         }
 
         .resilient-explainer {
@@ -431,7 +432,7 @@
         justify-content: center;
         gap: 0.4rem;
         padding: 0.6rem 1rem;
-        border-radius: $border-radius-sm;
+        border-radius: $border-radius-lg;
         background: var(--bg-elevated);
         border: 1px solid var(--border-medium);
         color: var(--text-primary);
@@ -440,7 +441,8 @@
         transition: all var(--transition-fast);
 
         &:hover {
-            border-color: var(--border-strong);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
             background: var(--bg-tertiary);
         }
     }

@@ -40,14 +40,14 @@
             color: var(--text-muted);
 
             a {
-                color: var(--text-primary);
+                color: var(--accent-primary);
                 font-weight: 600;
                 text-decoration: underline;
                 text-underline-offset: 3px;
-                transition: opacity var(--transition-fast);
+                transition: color var(--transition-fast);
 
                 &:hover {
-                    opacity: 0.8;
+                    color: var(--accent-primary-dark);
                 }
             }
         }

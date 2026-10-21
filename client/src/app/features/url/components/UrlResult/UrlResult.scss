@@ -3,22 +3,22 @@
 
 .url-result-card {
     @include card-surface;
-    border-color: var(--border-strong);
+    border-color: var(--accent-primary);
     background: var(--bg-elevated);
     padding: 1.5rem;
     margin-bottom: 2rem;
     position: relative;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--card-shadow);
     animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 
     .result-badge {
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
-        background: var(--accent-black);
-        color: var(--accent-white);
+        background: var(--accent-primary);
+        color: #ffffff;
         padding: 0.25rem 0.6rem;
-        border-radius: $border-radius-full;
+        border-radius: 6px;
         font-size: 0.725rem;
         font-weight: 600;
         letter-spacing: 0.03em;
@@ -83,27 +83,28 @@
         align-items: center;
         gap: 0.4rem;
         padding: 0.5rem 0.875rem;
-        border-radius: $border-radius-sm;
+        border-radius: $border-radius-lg;
         font-size: 0.825rem;
         font-weight: 500;
         transition: all var(--transition-fast);
 
         &.primary {
-            background: var(--accent-black);
-            color: var(--accent-white);
+            background: var(--accent-primary);
+            color: #ffffff;
 
             &:hover {
-                opacity: 0.88;
+                background: var(--accent-primary-dark);
             }
         }
 
         &.secondary {
             background: var(--bg-primary);
-            border: 1px solid var(--border-subtle);
+            border: 1px solid var(--border-medium);
             color: var(--text-primary);
 
             &:hover {
-                border-color: var(--border-strong);
+                border-color: var(--accent-primary);
+                color: var(--accent-primary);
             }
         }
     }

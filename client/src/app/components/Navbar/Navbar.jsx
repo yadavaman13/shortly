@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, LogOut, User, ChevronDown } from 'lucide-react';
+import { LogOut, User, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth/hooks/useAuth.js';
 import { AccountModal } from '../AccountModal/AccountModal.jsx';
@@ -9,18 +9,14 @@ export const Navbar = () => {
     const { user, isAuthenticated, logout } = useAuth();
     const navigate = useNavigate();
 
-    const [theme, setTheme] = useState(() => {
-        return localStorage.getItem('shortly-theme') || 'dark';
-    });
-
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
     const menuRef = useRef(null);
 
     useEffect(() => {
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('shortly-theme', theme);
-    }, [theme]);
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.removeItem('shortly-theme');
+    }, []);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -37,10 +33,6 @@ export const Navbar = () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [isMenuOpen]);
-
-    const toggleTheme = () => {
-        setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-    };
 
     const handleLogout = async () => {
         setIsMenuOpen(false);
@@ -61,17 +53,6 @@ export const Navbar = () => {
                     </div>
 
                     <div className="navbar-right">
-                        {/* Theme Toggle Button */}
-                        <button
-                            type="button"
-                            className="nav-btn theme-toggle-btn"
-                            onClick={toggleTheme}
-                            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
-                            aria-label="Toggle theme"
-                        >
-                            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-                            <span className="theme-text">light/Dark</span>
-                        </button>
 
                         {/* Guest state: Sign In & Register */}
                         {!isAuthenticated ? (
