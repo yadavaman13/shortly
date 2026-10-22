@@ -18,7 +18,7 @@ A production-grade, modular backend service and high-throughput redirection engi
 - [URL Engine & Redirection Mechanism](#-url-engine--redirection-mechanism)
     - [Base62 Slug Generation & Collision Resistance](#1-base62-slug-generation--collision-resistance)
     - [Reusable `shortenUrl` Pipeline Middleware](#2-reusable-shortenurl-pipeline-middleware)
-    - [Atomic Dual-Counter Tracking (`clicks` vs `qrScans`)](#3-atomic-dual-counter-tracking-clicks-vs-qrscans)
+    - [Atomic Visit Tracking & Scan Telemetry Foundation (`clicks` vs `qrScans`)](#3-atomic-visit-tracking--scan-telemetry-foundation-clicks-vs-qrscans)
     - [Resilient Dynamic Destinations & Version Audit History](#4-resilient-dynamic-destinations--version-audit-history)
     - [Browser Prefetch Filtering (`favicon.ico`)](#5-browser-prefetch-filtering-faviconico)
     - [Dual-Identifier Lookup Strategy](#6-dual-identifier-lookup-strategy)
@@ -112,7 +112,7 @@ The Shortly backend follows a modular, layer-separated architecture using native
 
 1. **Separation of Concerns**: Routes declare schemas and middleware chains; controllers handle business logic and status codes; models enforce persistence boundaries.
 2. **Defensive Validation**: Bad payloads are caught and rejected with descriptive field-level error messages before touching controller logic or database queries.
-3. **Atomic Concurrency**: Link visits and camera scans update counters atomically at the database layer using MongoDB's `$inc` operator, preventing lost updates under concurrent access.
+3. **Atomic Concurrency**: Link visits and referral counters update atomically at the database layer using MongoDB's `$inc` operator, preventing lost updates under concurrent access.
 4. **Resilient QR Guarantee**: Physical QR codes encode the permanent short URL slug. Target destinations can be modified anytime through `PATCH /api/url/:id` without invalidating physical prints.
 5. **Fail-Fast Startup**: Strict startup validation ensures the application immediately crashes on launch if required secrets or connection strings are missing, rather than failing subtly during runtime.
 
@@ -292,7 +292,7 @@ export function shortenUrl(options = {}) {
 
 This middleware powers both the standard URL shortener route (`POST /api/url`) and the dynamic QR route (`POST /api/qr`) without code duplication.
 
-### 3. Atomic Dual-Counter Tracking (`clicks` vs `qrScans`)
+### 3. Atomic Visit Tracking & Scan Telemetry Foundation (`clicks` vs `qrScans`)
 
 In high-concurrency environments, reading a document, incrementing the counter in JavaScript, and saving it back causes lost updates (race condition). Shortly prevents this by using MongoDB's atomic `$inc` update operator:
 
@@ -306,8 +306,9 @@ if (isQrScan) {
 const urlDoc = await urlModel.findOneAndUpdate({ shortUrl: shortCode }, updateOps, { new: true });
 ```
 
-- Standard browser clicks increment `clicks`.
-- Physical camera scans (`?ref=qr`) atomically increment both `clicks` and `qrScans`.
+- Standard visits increment `clicks`.
+- Dynamic QR code visits (`?ref=qr`) atomically increment both `clicks` and `qrScans`.
+- *Architecture Note*: While the backend provides native infrastructure for tracking `qrScans`, client-side in-browser camera scanning and dedicated UI telemetry cards are roadmapped for upcoming releases (see [docs/FUTURE_SCOPE.md](../docs/FUTURE_SCOPE.md)).
 
 ### 4. Resilient Dynamic Destinations & Version Audit History
 
@@ -376,7 +377,7 @@ All special RegExp metacharacters are escaped prior to regex instantiation, prev
 
 ### Print-Safe Architecture
 
-1. **Short Link Encoding**: Dynamic QR codes encode the permanent short URL with the camera tracking parameter:
+1. **Short Link Encoding**: Dynamic QR codes encode the permanent short URL with the referral tracking parameter:
     ```text
     http://localhost:3000/:shortCode?ref=qr
     ```
@@ -935,7 +936,7 @@ GET http://localhost:3000/:shortCode?ref=qr
 - **Authentication**: None (Public).
 - **Behavior**:
     - Atomically increments the `clicks` counter in MongoDB via `$inc`.
-    - When `?ref=qr` is present (camera scan), simultaneously increments `qrScans: 1`.
+    - When `?ref=qr` is present (dynamic QR target), simultaneously increments `qrScans: 1` (foundation for camera QR telemetry; see [Future Scope](../docs/FUTURE_SCOPE.md)).
     - Responds with **HTTP 302 Found** directing to the active `originalUrl`.
     - Intercepts `/favicon.ico` requests with **204 No Content**.
     - Returns **404 Not Found** if the short code does not exist in MongoDB.
