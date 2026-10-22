@@ -1,7 +1,7 @@
 <h1 align="center">Shortly - URL Shortener, Analytics & Resilient QR Codes</h1>
 
 <p align="center">
-  A high-performance, full-stack URL shortening service, click analytics platform, and dynamic QR code suite built with <strong>React 19</strong>, <strong>Express 5</strong>, <strong>React Router 7</strong>, and <strong>MongoDB</strong>. Features collision-resistant link generation, atomic visit and camera scan tracking, resilient print-safe QR codes with editable destinations, robust JWT cookie authentication with token blacklisting, and a Kraken-inspired design system.
+  A high-performance, full-stack URL shortening service, click analytics platform, and dynamic QR code suite built with <strong>React 19</strong>, <strong>Express 5</strong>, <strong>React Router 7</strong>, and <strong>MongoDB</strong>. Features collision-resistant link generation, atomic visit tracking, resilient print-safe QR codes with editable destinations, robust JWT cookie authentication with token blacklisting.
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@
 - [Key Features](#-key-features)
     - [1. Collision-Resistant URL Shortening & Instant Redirection](#1-collision-resistant-url-shortening--instant-redirection)
     - [2. Resilient Dynamic QR Codes (Print-Safe Architecture)](#2-resilient-dynamic-qr-codes-print-safe-architecture)
-    - [3. Dual Analytics (Clicks vs. Camera Scans)](#3-dual-analytics-clicks-vs-camera-scans)
+    - [3. Real-Time Click Analytics & Performance Metrics](#3-real-time-click-analytics--performance-metrics)
     - [4. Enterprise Authentication & Stateful Revocation](#4-enterprise-authentication--stateful-revocation)
     - [5. Kraken-Inspired Design System & UI/UX](#5-kraken-inspired-design-system--uiux)
 - [System Architecture](#-system-architecture)
@@ -54,9 +54,8 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
 
 1. **Lightweight URL Shortening**: Converts cumbersome links into compact, 6-character collision-resistant slugs.
 2. **Resilient Dynamic QR Codes**: Generates high-resolution vector/raster QR codes pointing to dynamic short URLs. If the destination URL or business domain changes later, you can update the target anytime without invalidating the physical QR codes already printed.
-3. **Granular Engagement Metrics**: Separates standard browser clicks from physical camera scans via scan-referral tracking (`?ref=qr`).
+3. **Granular Engagement Metrics**: Real-time atomic visit tracking, top-performing asset metrics, and historical destination updates.
 4. **Stateful Session Protection**: Complete user authentication featuring HTTP-only JWT cookies, server-side token blacklisting on logout, and multi-tier rate limiting.
-5. **Fintech-Grade User Experience**: Modern, clean, Kraken-inspired interface with fluid tab switching, account management, and real-time feedback.
 
 ---
 
@@ -78,12 +77,13 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
 - **Audit Trail & Version History**: Every destination update records the `previousUrl` and `changedAt` timestamp inside an `editHistory` array on MongoDB.
 - **Instant Preview & Download**: Live in-browser QR generation with options to inspect, download as high-resolution PNG, or copy short links directly.
 
-### 3. Dual Analytics (Clicks vs. Camera Scans)
+### 3. Real-Time Click Analytics & Performance Metrics
 
-- **Referral-Aware Metrics**: Differentiates between digital browser clicks and camera/lens scans (`?ref=qr`).
+- **Atomic Visit Increments**: High-throughput `$inc` updates in MongoDB prevent concurrency race conditions under heavy traffic.
+- **Aggregated Performance Cards**: Dashboard displays live metrics including total shortened links, active dynamic QR codes, cumulative visits, resilient destination updates, and top-performing assets.
 - **Live Search & Filter**: Instant client-side and server-side link filtering by original URL or short slug, protected against RegExp injection attacks.
-- **Aggregated Performance Cards**: Dashboard displays total links, active QR codes, cumulative clicks, camera scans, and resilient destination updates.
 - **Flexible Identifiers**: Endpoints accept either a 24-character MongoDB `ObjectId` or the 6-character `shortUrl` slug interchangeably.
+- **Future Camera Scanning & Telemetry**: Backend infrastructure already supports scan differentiation via `?ref=qr`; native in-browser camera scanning and dedicated QR telemetry are slated for upcoming releases (see [docs/FUTURE_SCOPE.md](docs/FUTURE_SCOPE.md)).
 
 ### 4. Enterprise Authentication & Stateful Revocation
 
@@ -92,13 +92,6 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
 - **Server-Side Token Revocation**: Logging out does not just clear client cookies; it persists the token to a MongoDB `blacklistTokens` collection to prevent replay attacks.
 - **Interactive Account Management**: Top navigation features an account dropdown and a dedicated **Account Profile Modal** displaying active session telemetry and one-click logout.
 - **Route Guards**: Built-in React Router guards (`ProtectedRoute` and `PublicOnlyRoute`) to manage authenticated views and redirect unauthenticated guests gracefully.
-
-### 5. Kraken-Inspired Design System & UI/UX
-
-- **Design Philosophy**: High-trust, professional aesthetic inspired by Kraken's design language, combining clean white/cool-gray surfaces with commanding purple accents (`#7132f5` / `#9b74ef`).
-- **Unified Main Dashboard**: Seamless single-page experience featuring a glowing hero banner, segmented tab switcher (`[ URL | QR ]`), and synchronized query parameters (`/?tab=qr`).
-- **Typography & Elevation**: Refined typography pairings (`IBM Plex Sans` for display and `Plus Jakarta Sans` for UI) coupled with whisper-soft shadows (`rgba(0, 0, 0, 0.03) 0px 4px 24px`) and 12px rounded components.
-- **Instant Feedback Loops**: Instant clipboard copying with visual confirmation, interactive action states, modal dialogs for QR inspection and URL editing, and global auto-dismissing toast notifications.
 
 ---
 
@@ -122,7 +115,7 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
  └─────────────────────────────────────┼──────────────────────────────────┘
                                        │
                      ┌─────────────────┴────────────────────────┐
-                     │ HTTP API Requests (JSON + Cookies)       │ Direct Browser & Camera Scans
+                     │ HTTP API Requests (JSON + Cookies)       │ Direct Browser & QR Visits
                      ▼                                          ▼
  ┌──────────────────────────────────────────────────────┐  ┌─────────────────────────────────────┐
  │               Express 5 API Pipeline                 │  │       Public Short URL Route        │
@@ -149,7 +142,7 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
  │       • shortUrl (unique indexed slug)                                 │
  │       • clicks (atomic $inc counters)                                  │
  │       • qrGenerated (boolean indicator)                                │
- │       • qrScans (atomic $inc on ?ref=qr)                               │
+ │       • qrScans (prepared for camera scan tracking; see future scope)  │
  │       • editHistory [{ previousUrl, changedAt }]                       │
  └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -256,6 +249,7 @@ url-shortner/
 │
 ├── docs/                                  # Project documentation & design specs
 │   ├── DESIGN-kraken.md                   # Kraken-inspired design system documentation
+│   ├── FUTURE_SCOPE.md                    # Roadmap: In-browser camera QR scanner & scan telemetry
 │   └── qrplan.md                          # Dynamic QR implementation blueprints
 ├── .prettierrc                            # Unified code formatting configuration
 ├── .prettierignore                        # Prettier ignore patterns
@@ -592,7 +586,7 @@ GET http://localhost:3000/:shortCode?ref=qr
 - **Access**: Public (no login required for end users clicking links or scanning codes).
 - **Behavior**:
     - Increments the `clicks` counter atomically in MongoDB via `$inc`.
-    - When `?ref=qr` is present (camera scan), also atomically increments `qrScans: 1`.
+    - When `?ref=qr` is present, also atomically increments `qrScans: 1` (foundation for upcoming camera QR scan telemetry; see [Future Scope](docs/FUTURE_SCOPE.md)).
     - Responds with **HTTP 302 Found** redirecting to the current `originalUrl`.
     - Automatically responds with **204 No Content** if the browser requests `/favicon.ico`.
     - Returns **404 Not Found** if the short code does not exist.
