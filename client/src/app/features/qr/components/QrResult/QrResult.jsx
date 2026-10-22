@@ -79,7 +79,6 @@ export const QrResult = () => {
             <div className="qr-result-card">
                 <div className="result-header">
                     <div className="result-badge">
-                        <Sparkles size={14} />
                         <span>Ready to Use</span>
                     </div>
                     <button
@@ -164,7 +163,6 @@ export const QrResult = () => {
                         <div className="resilient-status-card">
                             <div className="resilient-top">
                                 <div className="shield-tag">
-                                    <ShieldCheck size={14} />
                                     <span>Resilient Destination</span>
                                 </div>
                                 <span className="resilient-explainer">

@@ -50,9 +50,6 @@ export const AccountModal = ({ isOpen, onClose, user, onLogout }) => {
                         <div className="avatar-circle">{initial}</div>
                         <div className="avatar-meta">
                             <span className="account-username">{user.username}</span>
-                            <span className="account-status">
-                                <ShieldCheck size={13} /> Active Session
-                            </span>
                         </div>
                     </div>
 

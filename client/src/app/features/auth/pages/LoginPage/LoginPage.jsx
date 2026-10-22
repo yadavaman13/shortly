@@ -28,7 +28,7 @@ export const LoginPage = () => {
 
                 <div className="auth-footer">
                     <span>Don&apos;t have an account? </span>
-                    <Link to="/register" state={{ from: location.state?.from }}>Create one</Link>
+                    <Link to="/register" state={{ from: location.state?.from }}>Register now</Link>
                 </div>
             </div>
         </div>

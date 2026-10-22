@@ -17,7 +17,6 @@ export const UrlResult = () => {
     return (
         <div className="url-result-card">
             <span className="result-badge">
-                <Sparkles size={12} />
                 Link Ready
             </span>
 
