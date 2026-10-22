@@ -26,7 +26,6 @@
     - [2. Resilient Dynamic QR Codes (Print-Safe Architecture)](#2-resilient-dynamic-qr-codes-print-safe-architecture)
     - [3. Dual Analytics (Clicks vs. Camera Scans)](#3-dual-analytics-clicks-vs-camera-scans)
     - [4. Enterprise Authentication & Stateful Revocation](#4-enterprise-authentication--stateful-revocation)
-    - [5. Kraken-Inspired Design System & UI/UX](#5-kraken-inspired-design-system--uiux)
 - [System Architecture](#-system-architecture)
 - [Technology Stack](#-technology-stack)
 - [Project Directory Structure](#-project-directory-structure)
