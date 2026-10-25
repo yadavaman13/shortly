@@ -98,6 +98,11 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
 - **Interactive Account Management**: Top navigation features an account dropdown with dynamic Google avatar rendering and an **Account Profile Modal** displaying active session telemetry, sign-in provider method, and one-click logout.
 - **Route Guards**: Built-in React Router guards (`ProtectedRoute`, `PublicOnlyRoute`, and dedicated `/auth/callback` routing) manage navigation states cleanly.
 
+### 5. Multi-User Isolation & Reactive State Synchronization
+
+- **Strict User Scoping**: Every link and QR code is bound to the creator's account (`user: ObjectId`). Read, update, and deletion operations enforce strict ownership checks.
+- **Reactive Frontend Lifecycle**: `UrlContext` and `QrContext` subscribe to `useAuth()`. Signing in (local or Google OAuth) reactively queries user-specific links, while signing out immediately wipes local link memory, preventing cross-account state leakage.
+
 ---
 
 ## System Architecture
@@ -108,7 +113,7 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
  │                                                                        │
  │  ┌───────────────────────┐  ┌───────────────────────┐  ┌─────────────┐ │
  │  │ AuthProvider (Context)│  │ UrlProvider (Context) │  │ QrProvider  │ │
- │  │ - user, login, logout │  │ - urls, stats, filter │  │ - qrUrls    │ │
+ │  │ - user, login, logout │  │ - user-scoped urls    │  │ - user qrUrls│ │
  │  └───────────┬───────────┘  └───────────┬───────────┘  └──────┬──────┘ │
  │              │                          │                     │        │
  │              ▼                          ▼                     ▼        │
@@ -130,7 +135,7 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
  │  3. Modular Routers:                                 │                     │
  │     ├── /api/auth Router (register, login, logout)   │                     │
  │     ├── /api/url Router                              │                     │
- │     │   ├── shortenUrl() middleware                  │                     │
+ │     │   ├── shortenUrl() middleware (user-scoped)    │                     │
  │     │   ├── GET, POST, DELETE, and PATCH /:id        │                     │
  │     └── /api/qr Router                               │                     │
  │         ├── shortenUrl({ qrGenerated: true })        │                     │
@@ -141,9 +146,10 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
  ┌────────────────────────────────────────────────────────────────────────┐   │
  │                     Mongoose 9 / MongoDB Layer                         │◄──┘
  │                                                                        │
- │   - users Collection: Password hashing (bcrypt)                        │
+ │   - users Collection: Password hashing (bcrypt) & Google OAuth IDs     │
  │   - blacklistTokens Collection: Revoked tokens on logout               │
  │   - urls Collection:                                                   │
+ │       • user (ObjectId reference to users, indexed)                    │
  │       • shortUrl (unique indexed slug)                                 │
  │       • clicks (atomic $inc counters)                                  │
  │       • qrGenerated (boolean indicator)                                │
@@ -465,16 +471,16 @@ _Response (`200 OK` - Blacklists token and clears cookie):_
 
 ### URL Management Endpoints (`/api/url`)
 
-All `/api/url` endpoints require an authenticated session cookie.
+All `/api/url` endpoints require an authenticated session cookie and are strictly scoped to the authenticated user.
 
-| Method   | Endpoint                       | Rate Limit       | Description                                      |
-| :------- | :----------------------------- | :--------------- | :----------------------------------------------- |
-| `POST`   | `/api/url`                     | 10 req / min     | Shorten a target URL                             |
-| `GET`    | `/api/url`                     | 200 req / 15 min | List all links (supports `?search=` query)       |
-| `GET`    | `/api/url/:id`                 | 200 req / 15 min | Get details by Mongo `_id` or 6-char `shortUrl`  |
-| `PATCH`  | `/api/url/:id`                 | 200 req / 15 min | Update destination URL & append to `editHistory` |
-| `DELETE` | `/api/url/:id`                 | 200 req / 15 min | Delete link by Mongo `_id` or 6-char `shortUrl`  |
-| `GET`    | `/api/url/redirect/:shortCode` | 60 req / min     | API-level redirection with atomic click count    |
+| Method   | Endpoint                       | Rate Limit       | Description                                                 |
+| :------- | :----------------------------- | :--------------- | :---------------------------------------------------------- |
+| `POST`   | `/api/url`                     | 10 req / min     | Shorten a target URL bound to the authenticated user        |
+| `GET`    | `/api/url`                     | 200 req / 15 min | List authenticated user's links (supports `?search=` query) |
+| `GET`    | `/api/url/:id`                 | 200 req / 15 min | Get user's link details by Mongo `_id` or `shortUrl`        |
+| `PATCH`  | `/api/url/:id`                 | 200 req / 15 min | Update destination URL & append to `editHistory` (owner)    |
+| `DELETE` | `/api/url/:id`                 | 200 req / 15 min | Delete link by Mongo `_id` or 6-char `shortUrl` (owner)     |
+| `GET`    | `/api/url/redirect/:shortCode` | 60 req / min     | API-level redirection with atomic click count               |
 
 #### Shorten a URL
 
@@ -541,12 +547,12 @@ _Response (`200 OK`):_
 
 ### QR Code Endpoints (`/api/qr`)
 
-Dedicated endpoints for generating and managing print-safe dynamic QR codes.
+Dedicated endpoints for generating and managing print-safe dynamic QR codes, scoped to the authenticated user.
 
-| Method | Endpoint  | Rate Limit       | Description                                                        |
-| :----- | :-------- | :--------------- | :----------------------------------------------------------------- |
-| `POST` | `/api/qr` | 10 req / min     | Shortens URL, marks `qrGenerated: true`, and returns QR image data |
-| `GET`  | `/api/qr` | 200 req / 15 min | Retrieves all URLs created via the QR flow                         |
+| Method | Endpoint  | Rate Limit       | Description                                                                     |
+| :----- | :-------- | :--------------- | :------------------------------------------------------------------------------ |
+| `POST` | `/api/qr` | 10 req / min     | Shortens URL bound to user, marks `qrGenerated: true`, and returns QR image data|
+| `GET`  | `/api/qr` | 200 req / 15 min | Retrieves authenticated user's URLs created via the QR flow                     |
 
 #### Generate Dynamic QR Code
 

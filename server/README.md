@@ -315,7 +315,7 @@ export function shortenUrl(options = {}) {
     return async (req, res, next) => {
         // 1. Validates presence and structure of req.body.url
         // 2. Executes collision-safe slug generation loop
-        // 3. Creates Mongoose document with options.qrGenerated flag
+        // 3. Persists Mongoose document with user: req.user?.id and options.qrGenerated flag
         // 4. Attaches newly persisted document to req.shortenedUrl
         next();
     };
@@ -371,31 +371,35 @@ if (shortCode === 'favicon.ico') {
 
 The server immediately responds with `204 No Content` without performing a database lookup.
 
-### 6. Dual-Identifier Lookup Strategy
+### 6. Dual-Identifier Lookup & Ownership Verification Strategy
 
-Endpoints like `GET /api/url/:id`, `PATCH /api/url/:id`, and `DELETE /api/url/:id` allow users or frontends to pass either a 24-character hexadecimal MongoDB `ObjectId` or the 6-character `shortUrl` string:
+Endpoints like `GET /api/url/:id`, `PATCH /api/url/:id`, and `DELETE /api/url/:id` allow users or frontends to pass either a 24-character hexadecimal MongoDB `ObjectId` or the 6-character `shortUrl` string, while strictly ensuring ownership verification against `req.user.id`:
 
 ```javascript
+const userId = req.user?.id || req.user?._id;
+
 let url = null;
 if (mongoose.Types.ObjectId.isValid(id)) {
-    url = await urlModel.findById(id);
+    url = await urlModel.findOne({ _id: id, user: userId });
 }
 if (!url) {
-    url = await urlModel.findOne({ shortUrl: id });
+    url = await urlModel.findOne({ shortUrl: id, user: userId });
 }
 ```
 
-Evaluating `mongoose.Types.ObjectId.isValid(id)` first prevents Mongoose `CastError` exceptions when checking 6-character alphanumeric slugs.
+Evaluating `mongoose.Types.ObjectId.isValid(id)` first prevents Mongoose `CastError` exceptions when checking 6-character alphanumeric slugs, while scoping queries to `user: userId` prevents unauthorized data access across users.
 
-### 7. ReDoS-Safe URL Search
+### 7. User-Scoped & ReDoS-Safe URL Search
 
-In `getAllUrls`, search queries from the client (`?search=query`) filter both the original URL and the short code:
+In `getAllUrls`, search queries from the client (`?search=query`) filter both the original URL and the short code, strictly scoped to the authenticated user's records:
 
 ```javascript
+let filter = { user: userId };
 if (queryTerm) {
     const escaped = queryTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const searchRegex = new RegExp(escaped, 'i');
     filter = {
+        user: userId,
         $or: [{ shortUrl: searchRegex }, { originalUrl: searchRegex }],
     };
 }
@@ -529,6 +533,11 @@ Stored in the `urls` collection (`src/models/url.model.js`):
 ```javascript
 const urlSchema = new mongoose.Schema(
     {
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'users',
+            index: true,
+        },
         originalUrl: {
             type: String,
             required: true,
