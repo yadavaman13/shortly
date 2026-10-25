@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const urlSchema = new mongoose.Schema(
     {
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'users',
+            index: true,
+        },
         originalUrl: {
             type: String,
             required: true,

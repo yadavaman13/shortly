@@ -53,8 +53,13 @@ export async function createQr(req, res) {
  */
 export async function getAllQrUrls(req, res) {
     try {
+        const userId = req.user?.id || req.user?._id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized. Please sign in.' });
+        }
+
         const urls = await urlModel
-            .find({ qrGenerated: true })
+            .find({ user: userId, qrGenerated: true })
             .sort({ createdAt: -1 });
 
         return res.status(200).json({

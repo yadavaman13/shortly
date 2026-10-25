@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { createQr as apiCreateQr, getAllQrUrls } from '../services/qr.api.js';
 import { useUrlContext } from '../../url/context/urlContext.jsx';
+import { useAuth } from '../../auth/hooks/useAuth.js';
 
 const QrContext = createContext(null);
 
 export const QrProvider = ({ children }) => {
+    const { isAuthenticated, loading: authLoading } = useAuth();
     const [currentQr, setCurrentQr] = useState(null);
     const [qrUrls, setQrUrls] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -34,7 +36,12 @@ export const QrProvider = ({ children }) => {
             const list = response?.data?.urls || response?.urls || [];
             setQrUrls(list);
         } catch (err) {
-            if (err?.status === 401 || err?.statusCode === 401 || err?.message === 'token not provided') {
+            if (
+                err?.status === 401 ||
+                err?.statusCode === 401 ||
+                err?.message === 'token not provided' ||
+                err?.error?.includes('Unauthorized')
+            ) {
                 setQrUrls([]);
                 return;
             }
@@ -46,10 +53,19 @@ export const QrProvider = ({ children }) => {
         }
     }, []);
 
-    // Load QR URLs on mount
+    // Load / sync QR URLs when auth status updates
     useEffect(() => {
-        fetchQrUrls();
-    }, [fetchQrUrls]);
+        if (authLoading) return;
+
+        if (isAuthenticated) {
+            fetchQrUrls();
+        } else {
+            setQrUrls([]);
+            setCurrentQr(null);
+            setError(null);
+            setLoading(false);
+        }
+    }, [isAuthenticated, authLoading, fetchQrUrls]);
 
     // Generate QR action
     const generateQr = useCallback(
@@ -91,7 +107,10 @@ export const QrProvider = ({ children }) => {
                 return qrData;
             } catch (err) {
                 console.error('Failed to generate QR code:', err);
-                let errorMsg = details || err.error || 'Failed to generate QR code';
+                let errorMsg =
+                    (err?.details ? err.details.map((d) => d.message).join(', ') : err?.error) ||
+                    err?.message ||
+                    'Failed to generate QR code';
                 if (err.status === 401 || err.statusCode === 401 || errorMsg === 'token not provided') {
                     errorMsg = 'Please sign in or register to generate QR codes';
                 }

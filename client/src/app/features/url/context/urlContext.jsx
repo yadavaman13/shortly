@@ -5,10 +5,12 @@ import {
     deleteUrl as apiDeleteUrl,
     updateUrl as apiUpdateUrl,
 } from '../services/url.api.js';
+import { useAuth } from '../../auth/hooks/useAuth.js';
 
 const UrlContext = createContext(null);
 
 export const UrlProvider = ({ children }) => {
+    const { isAuthenticated, loading: authLoading } = useAuth();
     const [urls, setUrls] = useState([]);
     const [currentUrl, setCurrentUrl] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -39,7 +41,12 @@ export const UrlProvider = ({ children }) => {
             const list = response?.data?.urls || response?.urls || [];
             setUrls(list);
         } catch (err) {
-            if (err?.status === 401 || err?.statusCode === 401 || err?.message === 'token not provided') {
+            if (
+                err?.status === 401 ||
+                err?.statusCode === 401 ||
+                err?.message === 'token not provided' ||
+                err?.error?.includes('Unauthorized')
+            ) {
                 setUrls([]);
                 return;
             }
@@ -51,10 +58,19 @@ export const UrlProvider = ({ children }) => {
         }
     }, []);
 
-    // Load URLs on initial mount
+    // Load / sync URLs when auth status updates
     useEffect(() => {
-        fetchUrls();
-    }, [fetchUrls]);
+        if (authLoading) return;
+
+        if (isAuthenticated) {
+            fetchUrls();
+        } else {
+            setUrls([]);
+            setCurrentUrl(null);
+            setError(null);
+            setLoading(false);
+        }
+    }, [isAuthenticated, authLoading, fetchUrls]);
 
     // Shorten URL action
     const shortenUrl = useCallback(
@@ -87,7 +103,10 @@ export const UrlProvider = ({ children }) => {
                 return newRecord;
             } catch (err) {
                 console.error('Failed to create short URL:', err);
-                let errorMsg = details || err.error || 'Failed to shorten URL';
+                let errorMsg =
+                    (err?.details ? err.details.map((d) => d.message).join(', ') : err?.error) ||
+                    err?.message ||
+                    'Failed to shorten URL';
                 if (err.status === 401 || err.statusCode === 401 || errorMsg === 'token not provided') {
                     errorMsg = 'Please sign in or register to shorten links';
                 }

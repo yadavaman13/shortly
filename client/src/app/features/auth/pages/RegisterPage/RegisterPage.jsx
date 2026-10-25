@@ -94,7 +94,7 @@ export const RegisterPage = () => {
                     }}
                 >
                     <GoogleIcon />
-                    <span>Sign up with Google</span>
+                    <span>Sign in with Google</span>
                 </button>
 
                 <div className="auth-footer" style={{ marginTop: '1.25rem' }}>

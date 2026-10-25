@@ -59,6 +59,7 @@ export function shortenUrl(options = {}) {
                 originalUrl: url.trim(),
                 shortUrl: shortCode,
                 qrGenerated: options.qrGenerated || false,
+                user: req.user?.id || req.user?._id || null,
             });
 
             // Attach to request for downstream controllers

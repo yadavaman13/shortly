@@ -75,15 +75,23 @@ export async function redirectUrl(req, res) {
 
 export async function getAllUrls(req, res) {
     try {
+        const userId = req.user?.id || req.user?._id;
+        if (!userId) {
+            return res.status(401).json({
+                error: 'Unauthorized. Please sign in.',
+            });
+        }
+
         const { search, q } = req.query;
         const queryTerm = (search || q || '').trim();
 
-        let filter = {};
+        let filter = { user: userId };
         if (queryTerm) {
             // Escape regex special characters to prevent regex injection
             const escaped = queryTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const searchRegex = new RegExp(escaped, 'i');
             filter = {
+                user: userId,
                 $or: [{ shortUrl: searchRegex }, { originalUrl: searchRegex }],
             };
         }
@@ -108,6 +116,7 @@ export async function getAllUrls(req, res) {
 export async function getUrlById(req, res) {
     try {
         const { id } = req.params;
+        const userId = req.user?.id || req.user?._id;
 
         if (!id) {
             return res.status(400).json({
@@ -117,11 +126,11 @@ export async function getUrlById(req, res) {
 
         let url = null;
         if (mongoose.Types.ObjectId.isValid(id)) {
-            url = await urlModel.findById(id);
+            url = await urlModel.findOne({ _id: id, user: userId });
         }
 
         if (!url) {
-            url = await urlModel.findOne({ shortUrl: id });
+            url = await urlModel.findOne({ shortUrl: id, user: userId });
         }
 
         if (!url) {
@@ -148,6 +157,7 @@ export async function getUrlById(req, res) {
 export async function deleteUrl(req, res) {
     try {
         const { id } = req.params;
+        const userId = req.user?.id || req.user?._id;
 
         if (!id) {
             return res.status(400).json({
@@ -159,12 +169,12 @@ export async function deleteUrl(req, res) {
 
         //check by id
         if (mongoose.Types.ObjectId.isValid(id)) {
-            url = await urlModel.findByIdAndDelete(id);
+            url = await urlModel.findOneAndDelete({ _id: id, user: userId });
         }
 
         //check for shorturl
         if (!url) {
-            url = await urlModel.findOneAndDelete({ shortUrl: id });
+            url = await urlModel.findOneAndDelete({ shortUrl: id, user: userId });
         }
 
         if (!url) {
@@ -188,6 +198,7 @@ export async function deleteUrl(req, res) {
 export async function updateUrl(req, res) {
     try {
         const { id } = req.params;
+        const userId = req.user?.id || req.user?._id;
         const { url: newUrl } = req.body;
 
         if (!id) {
@@ -198,11 +209,11 @@ export async function updateUrl(req, res) {
 
         let urlDoc = null;
         if (mongoose.Types.ObjectId.isValid(id)) {
-            urlDoc = await urlModel.findById(id);
+            urlDoc = await urlModel.findOne({ _id: id, user: userId });
         }
 
         if (!urlDoc) {
-            urlDoc = await urlModel.findOne({ shortUrl: id });
+            urlDoc = await urlModel.findOne({ shortUrl: id, user: userId });
         }
 
         if (!urlDoc) {
