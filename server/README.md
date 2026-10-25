@@ -1,4 +1,4 @@
-# Shortly Server — Architecture & Implementation
+# Shortly Server - Architecture & Implementation
 
 A production-grade, modular backend service and high-throughput redirection engine powering the **Shortly** URL shortening and dynamic QR platform. Built with **Node.js (ES Modules)**, **Express 5**, and **MongoDB (Mongoose 9)**.
 
@@ -15,6 +15,8 @@ A production-grade, modular backend service and high-throughput redirection engi
     - [JWT Token Strategy](#2-jwt-token-strategy)
     - [Blacklist Token Revocation (Stateful Logout)](#3-blacklist-token-revocation-stateful-logout)
     - [Authentication Middleware (`authUser`)](#4-authentication-middleware-authuser)
+    - [Google OAuth 2.0 & Passport.js Strategy](#5-google-oauth-20--passportjs-strategy)
+    - [Secure Cookie Attributes](#6-secure-cookie-attributes)
 - [URL Engine & Redirection Mechanism](#-url-engine--redirection-mechanism)
     - [Base62 Slug Generation & Collision Resistance](#1-base62-slug-generation--collision-resistance)
     - [Reusable `shortenUrl` Pipeline Middleware](#2-reusable-shortenurl-pipeline-middleware)
@@ -128,7 +130,8 @@ server/
 ├── src/
 │   ├── config/
 │   │   ├── db.js                     # MongoDB connection initialization and lifecycle logging
-│   │   └── env.config.js             # Centralized environment assertions and exports
+│   │   ├── env.config.js             # Centralized environment assertions and exports
+│   │   └── passport.config.js        # Passport Google OAuth 2.0 strategy configuration
 │   │
 │   ├── middleware/
 │   │   ├── auth.middleware.js        # authUser JWT token verification and blacklist check
@@ -139,14 +142,15 @@ server/
 │   ├── models/
 │   │   ├── blacklist.model.js        # Blacklisted JWT tokens schema (revoked sessions)
 │   │   ├── url.model.js              # Shortened URL schema with click counter, QR flag, & audit log
-│   │   └── user.model.js             # User account schema with hashed credentials
+│   │   └── user.model.js             # User account schema with hashed credentials & OAuth metadata
 │   │
 │   ├── modules/
 │   │   ├── auth/
 │   │   │   ├── controllers/
-│   │   │   │   └── auth.controller.js# register, login, logout, getMe controllers
+│   │   │   │   ├── auth.controller.js  # register, login, logout, getMe controllers
+│   │   │   │   └── google.controller.js# googleAuthInitiate & googleAuthCallback
 │   │   │   └── routes/
-│   │   │       └── auth.route.js     # /api/auth routing definitions
+│   │   │       └── auth.route.js     # /api/auth and /auth routing definitions
 │   │   │
 │   │   ├── qr/
 │   │   │   ├── controllers/
@@ -240,6 +244,34 @@ export async function authUser(req, res, next) {
     }
 }
 ```
+
+### 5. Google OAuth 2.0 & Passport.js Strategy
+
+Shortly provides seamless Google OAuth 2.0 social sign-in powered by `passport` and `passport-google-oauth20`:
+
+- **Initiation (`GET /auth/google`)**: Initiates Google's consent flow requesting `['profile', 'email']` scopes.
+- **Callback (`GET /auth/google/callback`)**:
+  - Handles the OAuth code exchange and retrieves verified Google profile data.
+  - Automatically reconciles accounts in MongoDB through a three-stage strategy:
+    1. **Returning Google Users**: Matches existing records via `googleId` and updates profile pictures if modified.
+    2. **Account Linking**: If an existing local email/password user signs in with Google using that same email, their account is automatically upgraded with `googleId`, `authProvider: 'google'`, and their Google avatar.
+    3. **New User Provisioning**: Creates a new user record with `username`, `email`, `googleId`, `authProvider: 'google'`, and `profilePicture` (with `password` left optional).
+  - Signs the standard 7-day JWT token (`{ id: user._id }`), sets the secure HTTP-only cookie, and redirects the browser back to `${CLIENT_URL}/auth/callback?success=true`.
+
+### 6. Secure Cookie Attributes
+
+All authentication cookies (`token`) are set with strict security attributes to protect sessions against XSS and CSRF:
+
+```javascript
+res.cookie('token', token, {
+    httpOnly: true,                                       // Prevents client-side scripts from reading token
+    secure: envConfig.IS_PRODUCTION,                      // Enforces transmission exclusively over HTTPS in prod
+    sameSite: envConfig.IS_PRODUCTION ? 'strict' : 'lax', // Strict in prod; Lax in dev for smooth OAuth redirects
+    maxAge: 7 * 24 * 60 * 60 * 1000,                      // 7-day session duration
+});
+```
+
+When logging out, `res.clearCookie('token')` is executed with matching secure parameters.
 
 ---
 
@@ -471,7 +503,21 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'password is required'],
+        required: false, // Optional for Google OAuth accounts
+    },
+    authProvider: {
+        type: String,
+        enum: ['local', 'google'],
+        default: 'local',
+    },
+    googleId: {
+        type: String,
+        default: null,
+        sparse: true,
+    },
+    profilePicture: {
+        type: String,
+        default: null,
     },
 });
 ```
@@ -565,6 +611,14 @@ const envConfig = {
     IS_PRODUCTION: process.env.NODE_ENV === 'production',
     DATABASE_URL: process.env.DATABASE_URL,
     JWT_SECRET: process.env.JWT_SECRET,
+
+    // Google OAuth 2.0
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
+    GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/auth/google/callback',
+
+    // Client URL (post-OAuth redirect target)
+    CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
 };
 ```
 
@@ -659,7 +713,7 @@ Creates a new user profile.
 
 #### `POST /api/auth/login`
 
-Authenticates a user and establishes an HTTP cookie session.
+Authenticates a user with email and password and establishes an HTTP cookie session.
 
 - **Headers**: `Content-Type: application/json`
 - **Request Body**:
@@ -670,7 +724,7 @@ Authenticates a user and establishes an HTTP cookie session.
     }
     ```
 - **Responses**:
-    - `200 OK` (Sets cookie `token`):
+    - `200 OK` (Sets cookie `token` with `httpOnly`, `sameSite`, `secure`):
         ```json
         {
             "message": "Login successfull",
@@ -681,7 +735,29 @@ Authenticates a user and establishes an HTTP cookie session.
             "token": "eyJhbGciOiJIUzI1NiIsIn..."
         }
         ```
-    - `400 Bad Request`: `{ "message": "No user exists with this email" }` or `{ "message": "Entered password is incorrect" }`
+    - `400 Bad Request`:
+      - `{ "message": "No user exists with this email" }`
+      - `{ "message": "Entered password is incorrect" }`
+      - `{ "message": "This account uses Google sign-in. Please use the \"Sign in with Google\" button." }`
+
+#### `GET /auth/google` *(or `/api/auth/google`)*
+
+Initiates the Google OAuth 2.0 authorization code flow.
+
+- **Access**: Public
+- **Behavior**: Redirects browser to Google's OAuth 2.0 consent screen with `scope=profile email`.
+
+#### `GET /auth/google/callback` *(or `/api/auth/google/callback`)*
+
+OAuth callback endpoint invoked by Google following user consent.
+
+- **Access**: Public (invoked by browser redirect from Google)
+- **Behavior**:
+  - Exchanges authorization code for profile and access token.
+  - Provisions or links user in MongoDB.
+  - Generates 7-day JWT cookie.
+  - Redirects browser to `${CLIENT_URL}/auth/callback?success=true`.
+  - On failure, redirects browser to `${CLIENT_URL}/login?error=oauth_failed`.
 
 #### `GET /api/auth/me`
 
@@ -695,7 +771,9 @@ Fetches the active user profile from the provided cookie session.
             "message": "user fetched successfully",
             "data": {
                 "username": "aman",
-                "email": "aman@example.com"
+                "email": "aman@example.com",
+                "authProvider": "google",
+                "profilePicture": "https://lh3.googleusercontent.com/a/..."
             },
             "token": "eyJhbGciOiJIUzI1NiIsIn..."
         }

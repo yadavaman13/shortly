@@ -11,9 +11,14 @@
   <a href="https://expressjs.com/"><img src="https://img.shields.io/badge/Express-5.2.1-000000?style=flat-square&logo=express&logoColor=white" alt="Express 5" /></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js 18+" /></a>
   <a href="https://www.mongodb.com/"><img src="https://img.shields.io/badge/MongoDB-Atlas%20%2F%20Local-47A248?style=flat-square&logo=mongodb&logoColor=white" alt="MongoDB" /></a>
+  <a href="https://www.passportjs.org/"><img src="https://img.shields.io/badge/Passport.js-Google_OAuth_2.0-34A853?style=flat-square&logo=google&logoColor=white" alt="Passport Google OAuth 2.0" /></a>
   <a href="https://www.npmjs.com/package/qrcode"><img src="https://img.shields.io/badge/QRCode-1.5.4-blue?style=flat-square&logo=qr-code&logoColor=white" alt="QRCode" /></a>
   <a href="https://jwt.io/"><img src="https://img.shields.io/badge/JWT-Secure%20Cookies-000000?style=flat-square&logo=json-web-tokens&logoColor=white" alt="JWT" /></a>
   <a href="https://prettier.io"><img src="https://img.shields.io/badge/Code%20Style-Prettier-ff69b4.svg?style=flat-square" alt="Prettier" /></a>
+</p>
+
+<p align="center">
+  <img src="https://ik.imagekit.io/cuq3fe9wm/sheryians-backend/Screenshot%202026-10-25%20150705.png" alt="Shortly Dashboard & Home Page Preview" width="100%" />
 </p>
 
 ---
@@ -84,13 +89,14 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
 - **Flexible Identifiers**: Endpoints accept either a 24-character MongoDB `ObjectId` or the 6-character `shortUrl` slug interchangeably.
 - **Future Camera Scanning & Telemetry**: Backend infrastructure already supports scan differentiation via `?ref=qr`; native in-browser camera scanning and dedicated QR telemetry are slated for upcoming releases (see [docs/FUTURE_SCOPE.md](docs/FUTURE_SCOPE.md)).
 
-### 4. Enterprise Authentication & Stateful Revocation
+### 4. Authentication, Google OAuth 2.0 & Stateful Revocation
 
-- **Complete User Lifecycle**: Registration, login, profile validation (`/api/auth/me`), and sign-out flows.
-- **Secure Cookie Sessions**: JSON Web Tokens (JWT) are transferred and validated via cookies with `withCredentials: true` in Axios.
-- **Server-Side Token Revocation**: Logging out does not just clear client cookies; it persists the token to a MongoDB `blacklistTokens` collection to prevent replay attacks.
-- **Interactive Account Management**: Top navigation features an account dropdown and a dedicated **Account Profile Modal** displaying active session telemetry and one-click logout.
-- **Route Guards**: Built-in React Router guards (`ProtectedRoute` and `PublicOnlyRoute`) to manage authenticated views and redirect unauthenticated guests gracefully.
+- **Dual Authentication Channels**: Supports standard email/password registration & login as well as one-click **Google OAuth 2.0** social sign-in.
+- **Smart Account Linking**: Automatically reconciles existing email accounts when a user signs in with Google, maintaining unified user records without duplicate profiles.
+- **Secure Cookie Sessions**: JSON Web Tokens (JWT) are signed and stored in HTTP-only, SameSite-protected cookies (`httpOnly: true`, `sameSite`, `secure: isProduction`).
+- **Server-Side Token Revocation**: Logging out does not just clear client cookies; it persists the active token to a MongoDB `blacklistTokens` collection to invalidate it immediately across the server.
+- **Interactive Account Management**: Top navigation features an account dropdown with dynamic Google avatar rendering and an **Account Profile Modal** displaying active session telemetry, sign-in provider method, and one-click logout.
+- **Route Guards**: Built-in React Router guards (`ProtectedRoute`, `PublicOnlyRoute`, and dedicated `/auth/callback` routing) manage navigation states cleanly.
 
 ---
 
@@ -173,6 +179,7 @@ Long, cluttered URLs are fragile, look unprofessional in communication, and hide
 | **JSONWebToken**       | `9.0.3`  | Cryptographic JWT token generation and verification                |
 | **Bcrypt**             | `6.0.0`  | Secure one-way password hashing (10 salt rounds)                   |
 | **Cookie-Parser**      | `1.4.7`  | Middleware to parse and read HTTP cookies                          |
+| **Passport.js**        | `0.7.0`  | Authentication middleware with `passport-google-oauth20` strategy |
 | **Express Rate Limit** | `8.7.0`  | Tiered protection against brute-force and denial-of-service        |
 | **Express Validator**  | `7.3.2`  | Request body and parameter validation with standardized 422 errors |
 | **Morgan**             | `1.12.1` | Standard Apache-format HTTP request logger                         |
@@ -196,7 +203,7 @@ url-shortner/
 │   │   │   │   │   ├── components/        # LoginForm, RegisterForm
 │   │   │   │   │   ├── context/           # AuthContext (user, login, logout, checkAuth)
 │   │   │   │   │   ├── hooks/             # useAuth hook
-│   │   │   │   │   ├── pages/             # LoginPage, RegisterPage
+│   │   │   │   │   ├── pages/             # LoginPage, RegisterPage, OAuthCallbackPage
 │   │   │   │   │   └── services/          # auth.api.js (Axios endpoints)
 │   │   │   │   ├── qr/                    # Dynamic Resilient QR Module
 │   │   │   │   │   ├── components/        # QrForm, QrResult, QrStats, QrList, QrModal, EditUrlModal
@@ -225,7 +232,8 @@ url-shortner/
 │   ├── src/
 │   │   ├── config/
 │   │   │   ├── db.js                      # MongoDB connection & reconnect handlers
-│   │   │   └── env.config.js              # Strict environment variable assertions
+│   │   │   ├── env.config.js              # Strict environment variable assertions
+│   │   │   └── passport.config.js         # Passport Google OAuth 2.0 strategy configuration
 │   │   ├── middleware/
 │   │   │   ├── auth.middleware.js         # JWT cookie validation & blacklist check
 │   │   │   ├── rateLimit.middleware.js    # Global, creation, and redirect rate limiters
@@ -234,9 +242,11 @@ url-shortner/
 │   │   ├── models/
 │   │   │   ├── blacklist.model.js         # Logged-out revoked tokens
 │   │   │   ├── url.model.js               # Shortened link records, QR flags, scan metrics
-│   │   │   └── user.model.js              # User account credentials
+│   │   │   └── user.model.js              # User account credentials & OAuth provider data
 │   │   ├── modules/
-│   │   │   ├── auth/                      # Auth controllers & routes (/api/auth)
+│   │   │   ├── auth/                      # Auth controllers & routes (/api/auth & /auth)
+│   │   │   │   ├── controllers/           # auth.controller.js, google.controller.js
+│   │   │   │   └── routes/                # auth.route.js
 │   │   │   ├── qr/                        # QR controllers & routes (/api/qr)
 │   │   │   └── url/                       # URL controllers & routes (/api/url)
 │   │   ├── utils/
@@ -288,6 +298,14 @@ SERVER_PORT=3000
 
 # Server base URL for building full links (Optional, default: http://localhost:3000)
 SERVER_URL=http://localhost:3000
+
+# Google OAuth 2.0 Credentials (Optional, disables Google Sign-In if empty)
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+
+# Client URL (post-OAuth redirect target)
+CLIENT_URL=http://localhost:5173
 
 # Environment mode
 NODE_ENV=development
@@ -343,14 +361,16 @@ npm start
 
 Base URL: `http://localhost:3000`
 
-### Authentication Endpoints (`/api/auth`)
+### Authentication Endpoints (`/api/auth` & `/auth`)
 
-| Method | Endpoint             | Access    | Description                                    |
-| :----- | :------------------- | :-------- | :--------------------------------------------- |
-| `POST` | `/api/auth/register` | Public    | Create a new user account                      |
-| `POST` | `/api/auth/login`    | Public    | Authenticate user and receive HTTP cookie      |
-| `POST` | `/api/auth/logout`   | Public    | Revoke session, blacklist token & clear cookie |
-| `GET`  | `/api/auth/me`       | Protected | Fetch current authenticated user profile       |
+| Method | Endpoint               | Access    | Description                                             |
+| :----- | :--------------------- | :-------- | :------------------------------------------------------ |
+| `POST` | `/api/auth/register`   | Public    | Create a new user account with email & password         |
+| `POST` | `/api/auth/login`      | Public    | Authenticate user with password & receive HTTP cookie   |
+| `GET`  | `/auth/google`         | Public    | Initiate Google OAuth 2.0 social sign-in flow           |
+| `GET`  | `/auth/google/callback`| Public    | Google OAuth redirect callback (issues JWT cookie)      |
+| `POST` | `/api/auth/logout`     | Public    | Revoke session, blacklist token & clear secure cookie   |
+| `GET`  | `/api/auth/me`         | Protected | Fetch current authenticated user profile & provider info|
 
 #### Register User
 
@@ -358,8 +378,8 @@ Base URL: `http://localhost:3000`
 
 ```json
 {
-    "username": "alex",
-    "email": "alex@example.com",
+    "username": "user",
+    "email": "user@example.com",
     "password": "Password123"
 }
 ```
@@ -370,8 +390,8 @@ _Response (`201 Created`):_
 {
     "message": "user registration successfull",
     "data": {
-        "username": "alex",
-        "email": "alex@example.com"
+        "username": "user",
+        "email": "user@example.com"
     }
 }
 ```
@@ -382,23 +402,33 @@ _Response (`201 Created`):_
 
 ```json
 {
-    "email": "alex@example.com",
+    "email": "user@example.com",
     "password": "Password123"
 }
 ```
 
-_Response (`200 OK` - Sets `token` cookie):_
+_Response (`200 OK` - Sets secure `token` cookie):_
 
 ```json
 {
     "message": "Login successfull",
     "data": {
-        "username": "alex",
-        "email": "alex@example.com"
+        "username": "user",
+        "email": "user@example.com"
     },
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
+
+> [!NOTE]
+> Accounts created exclusively via Google OAuth without a password will return `400 Bad Request` directing the user to use the "Sign in with Google" button.
+
+#### Google OAuth 2.0 Authentication
+
+- **Initiate Flow**: `GET /auth/google` (or `/api/auth/google`)  
+  Redirects the user to Google's consent screen.
+- **Callback**: `GET /auth/google/callback` (or `/api/auth/google/callback`)  
+  Receives authorization code, provisions or links the user account in MongoDB, sets the secure HTTP-only JWT cookie, and redirects to `${CLIENT_URL}/auth/callback?success=true`.
 
 #### Verify Current Session
 
@@ -410,8 +440,10 @@ _Response (`200 OK`):_
 {
     "message": "user fetched successfully",
     "data": {
-        "username": "alex",
-        "email": "alex@example.com"
+        "username": "user",
+        "email": "user@example.com",
+        "authProvider": "google",
+        "profilePicture": "https://lh3.googleusercontent.com/a/..."
     },
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
