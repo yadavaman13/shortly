@@ -47,7 +47,17 @@ export const AccountModal = ({ isOpen, onClose, user, onLogout }) => {
 
                 <div className="modal-body">
                     <div className="account-avatar-banner">
-                        <div className="avatar-circle">{initial}</div>
+                        <div className={`avatar-circle ${user.profilePicture ? 'has-image' : ''}`}>
+                            {user.profilePicture ? (
+                                <img
+                                    src={user.profilePicture}
+                                    alt={user.username}
+                                    referrerPolicy="no-referrer"
+                                />
+                            ) : (
+                                initial
+                            )}
+                        </div>
                         <div className="avatar-meta">
                             <span className="account-username">{user.username}</span>
                         </div>

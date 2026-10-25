@@ -25,6 +25,8 @@
         "jsonwebtoken": "^9.0.3",
         "mongoose": "^9.10.2",
         "morgan": "^1.12.1",
+        "passport": "^0.7.0",
+        "passport-google-oauth20": "^2.0.0",
         "qrcode": "^1.5.4"
     }
 }

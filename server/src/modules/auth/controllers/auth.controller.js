@@ -71,6 +71,13 @@ export async function loginUserController(req, res) {
             });
         }
 
+        // Prevent password login for Google-only users
+        if (user.authProvider === 'google' && !user.password) {
+            return res.status(400).json({
+                message: 'This account uses Google sign-in. Please use the "Sign in with Google" button.',
+            });
+        }
+
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
@@ -81,7 +88,12 @@ export async function loginUserController(req, res) {
 
         const token = jwt.sign({ id: user._id }, envConfig.JWT_SECRET, { expiresIn: '7d' });
 
-        res.cookie('token', token);
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: envConfig.IS_PRODUCTION,
+            sameSite: envConfig.IS_PRODUCTION ? 'strict' : 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
 
         return res.status(200).json({
             message: 'Login successfull',
@@ -111,7 +123,11 @@ export async function logoutUserController(req, res) {
 
         await blacklistTokenModel.create({ token });
 
-        res.clearCookie('token');
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: envConfig.IS_PRODUCTION,
+            sameSite: envConfig.IS_PRODUCTION ? 'strict' : 'lax',
+        });
 
         return res.status(200).json({
             message: 'logged out successfully',
@@ -160,6 +176,8 @@ export async function getMeController(req, res) {
             data: {
                 username: user.username,
                 email: user.email,
+                authProvider: user.authProvider || 'local',
+                profilePicture: user.profilePicture || null,
             },
             token,
         });

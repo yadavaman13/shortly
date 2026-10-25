@@ -6,6 +6,7 @@ import {
     registerUserController,
 } from '../controllers/auth.controller.js';
 import { validateLogin, validateRegister } from '../../../middleware/validate.middleware.js';
+import { googleAuthInitiate, googleAuthCallback } from '../controllers/google.controller.js';
 
 const authRouter = express.Router();
 
@@ -37,4 +38,19 @@ authRouter.post('/logout', logoutUserController);
  */
 authRouter.get('/me', getMeController);
 
+/**
+ * @route GET /api/auth/google
+ * @desc Initiate Google OAuth 2.0 login flow
+ * @access Public
+ */
+authRouter.get('/google', googleAuthInitiate);
+
+/**
+ * @route GET /api/auth/google/callback
+ * @desc Google OAuth callback — creates JWT cookie and redirects to client
+ * @access Public (called by Google redirect)
+ */
+authRouter.get('/google/callback', googleAuthCallback);
+
 export default authRouter;
+

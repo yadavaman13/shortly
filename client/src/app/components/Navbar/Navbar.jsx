@@ -79,8 +79,16 @@ export const Navbar = () => {
                                     aria-haspopup="true"
                                     aria-expanded={isMenuOpen}
                                 >
-                                    <div className="avatar-icon-box">
-                                        <User size={16} />
+                                    <div className={`avatar-icon-box ${user?.profilePicture ? 'has-image' : ''}`}>
+                                        {user?.profilePicture ? (
+                                            <img
+                                                src={user.profilePicture}
+                                                alt={user?.username || 'Avatar'}
+                                                referrerPolicy="no-referrer"
+                                            />
+                                        ) : (
+                                            <User size={15} />
+                                        )}
                                     </div>
                                     <ChevronDown
                                         size={13}
@@ -91,7 +99,17 @@ export const Navbar = () => {
                                 {isMenuOpen && (
                                     <div className="user-dropdown-card" role="menu">
                                         <div className="dropdown-user-info">
-                                            <div className="mini-avatar">{initial}</div>
+                                            <div className={`mini-avatar ${user?.profilePicture ? 'has-image' : ''}`}>
+                                                {user?.profilePicture ? (
+                                                    <img
+                                                        src={user.profilePicture}
+                                                        alt={user?.username || 'Avatar'}
+                                                        referrerPolicy="no-referrer"
+                                                    />
+                                                ) : (
+                                                    initial
+                                                )}
+                                            </div>
                                             <div className="mini-user-text">
                                                 <span className="name">{user?.username}</span>
                                                 <span className="email">

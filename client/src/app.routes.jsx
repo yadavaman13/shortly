@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './app/features/auth/hooks/useAuth.js';
-import { LoginPage, RegisterPage } from './app/features/auth/pages/index.js';
+import { LoginPage, RegisterPage, OAuthCallbackPage } from './app/features/auth/pages/index.js';
 import { MainDashboard } from './app/pages/MainDashboard/MainDashboard.jsx';
 import { Loader2 } from 'lucide-react';
 
@@ -89,6 +89,10 @@ export default function AppRoutes() {
                     </PublicOnlyRoute>
                 }
             />
+
+            {/* OAuth callback — not wrapped in PublicOnlyRoute because the user
+                is in a transitional state (cookie set, but context not yet updated) */}
+            <Route path="/auth/callback" element={<OAuthCallbackPage />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
